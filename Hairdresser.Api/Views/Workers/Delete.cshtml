@@ -1,0 +1,58 @@
+@model Hairdresser.Api.Models.Worker
+@{
+    ViewData["Title"] = "Çalışan Sil";
+}
+
+<div class="row">
+    <div class="col-md-6 offset-md-3">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-exclamation-triangle"></i> Çalışan Sil
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-circle"></i>
+                    <strong>@Model.Name</strong> adlı çalışanı silmek istediğinizden emin misiniz?
+                    <br /><br />
+                    Bu işlem geri alınamaz ve çalışana ait tüm randevular da silinecektir.
+                </div>
+
+                <dl class="row">
+                    <dt class="col-sm-4">İsim:</dt>
+                    <dd class="col-sm-8">@Model.Name</dd>
+
+                    <dt class="col-sm-4">Uzmanlık:</dt>
+                    <dd class="col-sm-8">@(Model.Specialty ?? "-")</dd>
+
+                    <dt class="col-sm-4">Durum:</dt>
+                    <dd class="col-sm-8">
+                        @if (Model.IsActive)
+                        {
+                            <span class="badge bg-success">Aktif</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-danger">Pasif</span>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-4">Randevu Sayısı:</dt>
+                    <dd class="col-sm-8">@Model.Appointments.Count</dd>
+                </dl>
+
+                <form asp-action="Delete" method="post">
+                    <input type="hidden" asp-for="Id" />
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash"></i> Evet, Sil
+                    </button>
+                    <a asp-action="Index" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left"></i> İptal
+                    </a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+

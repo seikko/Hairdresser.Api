@@ -1,0 +1,49 @@
+@model Hairdresser.Api.Models.ViewModels.AppointmentDeleteViewModel
+@{
+    ViewData["Title"] = "Randevu Sil";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0 text-danger"><i class="bi bi-trash"></i> Randevu Sil</h2>
+    <a class="btn btn-outline-secondary" asp-action="Index" asp-route-date="@Model.Date">
+        <i class="bi bi-arrow-left"></i> Geri
+    </a>
+</div>
+
+<div class="card border-danger">
+    <div class="card-body">
+        <div class="alert alert-warning">
+            <strong>Dikkat:</strong> Bu randevu kalıcı olarak silinecek.
+        </div>
+
+        <dl class="row">
+            <dt class="col-sm-3">Tarih / Saat</dt>
+            <dd class="col-sm-9">@Model.Date @Model.Time</dd>
+
+            <dt class="col-sm-3">Çalışan</dt>
+            <dd class="col-sm-9">@Model.WorkerName</dd>
+
+            <dt class="col-sm-3">Müşteri</dt>
+            <dd class="col-sm-9">@Model.CustomerName (+@Model.PhoneNumber)</dd>
+
+            <dt class="col-sm-3">Durum</dt>
+            <dd class="col-sm-9">@Model.StatusText</dd>
+
+            <dt class="col-sm-3">Hizmet</dt>
+            <dd class="col-sm-9">@(string.IsNullOrWhiteSpace(Model.ServiceType) ? "-" : Model.ServiceType)</dd>
+        </dl>
+
+        <form method="post" asp-action="DeleteConfirmed">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" value="@Model.Id" />
+            <div class="d-flex justify-content-end gap-2">
+                <a class="btn btn-outline-secondary" asp-action="Edit" asp-route-id="@Model.Id">Vazgeç</a>
+                <button type="submit" class="btn btn-danger">
+                    <i class="bi bi-trash"></i> Sil
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+

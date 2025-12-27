@@ -1,0 +1,99 @@
+@model Hairdresser.Api.Models.ViewModels.AppointmentEditViewModel
+@using Hairdresser.Api.Models
+@{
+    ViewData["Title"] = "Randevu Düzenle";
+    var workers = ViewBag.Workers as List<Worker> ?? new List<Worker>();
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h2 class="mb-0"><i class="bi bi-pencil"></i> Randevu Düzenle</h2>
+        <div class="text-muted">@Model.CustomerDisplay</div>
+    </div>
+    <a class="btn btn-outline-secondary" asp-action="Index" asp-route-date="@Model.AppointmentDate" asp-route-workerId="@Model.WorkerId">
+        <i class="bi bi-arrow-left"></i> Geri
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+        <form method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="Id" />
+
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label asp-for="WorkerId" class="form-label"></label>
+                    <select asp-for="WorkerId" class="form-select">
+                        @foreach (var w in workers)
+                        {
+                            <option value="@w.Id">@w.Name</option>
+                        }
+                    </select>
+                    <span asp-validation-for="WorkerId" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-3">
+                    <label asp-for="AppointmentDate" class="form-label"></label>
+                    <input asp-for="AppointmentDate" type="date" class="form-control" />
+                    <span asp-validation-for="AppointmentDate" class="text-danger"></span>
+                </div>
+                <div class="col-md-3">
+                    <label asp-for="AppointmentTime" class="form-label"></label>
+                    <input asp-for="AppointmentTime" type="time" class="form-control" />
+                    <span asp-validation-for="AppointmentTime" class="text-danger"></span>
+                </div>
+                <div class="col-md-2">
+                    <label asp-for="DurationMinutes" class="form-label"></label>
+                    <input asp-for="DurationMinutes" type="number" min="5" max="600" step="5" class="form-control" />
+                    <span asp-validation-for="DurationMinutes" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-3">
+                    <label asp-for="Status" class="form-label"></label>
+                    <select asp-for="Status" class="form-select">
+                        <option value="pending">Bekliyor</option>
+                        <option value="confirmed">Onaylandı</option>
+                        <option value="completed">Tamamlandı</option>
+                        <option value="cancelled">İptal</option>
+                    </select>
+                    <span asp-validation-for="Status" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-9">
+                    <label asp-for="ServiceType" class="form-label"></label>
+                    <input asp-for="ServiceType" class="form-control" />
+                    <span asp-validation-for="ServiceType" class="text-danger"></span>
+                </div>
+
+                <div class="col-12">
+                    <label asp-for="Notes" class="form-label"></label>
+                    <textarea asp-for="Notes" class="form-control" rows="3"></textarea>
+                    <span asp-validation-for="Notes" class="text-danger"></span>
+                </div>
+
+                <div class="col-12 d-flex justify-content-between align-items-center mt-2">
+                    <a class="btn btn-outline-danger" asp-action="Delete" asp-route-id="@Model.Id">
+                        <i class="bi bi-trash"></i> Sil
+                    </a>
+                    <div class="d-flex gap-2">
+                        <a class="btn btn-outline-secondary" asp-action="Index" asp-route-date="@Model.AppointmentDate" asp-route-workerId="@Model.WorkerId">
+                            İptal
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save"></i> Kaydet
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
+
+

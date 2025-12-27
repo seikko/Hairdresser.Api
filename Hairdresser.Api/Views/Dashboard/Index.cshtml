@@ -1,0 +1,245 @@
+@model Hairdresser.Api.Models.ViewModels.DashboardViewModel
+@{
+    ViewData["Title"] = "Randevular";
+    var prevMonth = Model.CurrentMonth == 1 ? 12 : Model.CurrentMonth - 1;
+    var prevYear = Model.CurrentMonth == 1 ? Model.CurrentYear - 1 : Model.CurrentYear;
+    var nextMonth = Model.CurrentMonth == 12 ? 1 : Model.CurrentMonth + 1;
+    var nextYear = Model.CurrentMonth == 12 ? Model.CurrentYear + 1 : Model.CurrentYear;
+}
+
+<!-- Used by JS POST actions (UpdateStatus/UpdateNotes) to pick up an antiforgery token -->
+<form method="post" style="display:none;">
+    @Html.AntiForgeryToken()
+</form>
+
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h2>
+                <i class="bi bi-calendar-check"></i> Randevular
+            </h2>
+            <div class="d-flex gap-2 align-items-center">
+                <select id="workerFilter" class="form-select" style="width: 200px;" onchange="filterByWorker()">
+                    <option value="">Tüm Çalışanlar</option>
+                    @foreach (var worker in Model.Workers)
+                    {
+                        if (Model.SelectedWorkerId == worker.Id)
+                        {
+                            <option value="@worker.Id" selected>@worker.Name</option>
+                        }
+                        else
+                        {
+                            <option value="@worker.Id">@worker.Name</option>
+                        }
+                    }
+                </select>
+                <a asp-action="Index" class="btn btn-outline-secondary">
+                    <i class="bi bi-calendar-today"></i> Bugün
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center border-primary">
+            <div class="card-body">
+                <h3 class="text-primary">@Model.TotalAppointments</h3>
+                <p class="mb-0">Toplam Randevu</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-success">
+            <div class="card-body">
+                <h3 class="text-success">@Model.ConfirmedAppointments</h3>
+                <p class="mb-0">Onaylandı</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-warning">
+            <div class="card-body">
+                <h3 class="text-warning">@Model.PendingAppointments</h3>
+                <p class="mb-0">Bekliyor</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-danger">
+            <div class="card-body">
+                <h3 class="text-danger">@Model.CancelledAppointments</h3>
+                <p class="mb-0">İptal</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Full Width Calendar -->
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <a href="@Url.Action("Index", new { month = prevMonth, year = prevYear, date = Model.SelectedDate.ToString("yyyy-MM-dd"), workerId = Model.SelectedWorkerId })" 
+                       class="btn btn-light">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                    <h4 class="mb-0">@Model.MonthName @Model.CurrentYear</h4>
+                    <a href="@Url.Action("Index", new { month = nextMonth, year = nextYear, date = Model.SelectedDate.ToString("yyyy-MM-dd"), workerId = Model.SelectedWorkerId })" 
+                       class="btn btn-light">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-bordered mb-0 calendar-table">
+                    <thead>
+                        <tr class="text-center bg-light">
+                            <th width="14.28%">Pazartesi</th>
+                            <th width="14.28%">Salı</th>
+                            <th width="14.28%">Çarşamba</th>
+                            <th width="14.28%">Perşembe</th>
+                            <th width="14.28%">Cuma</th>
+                            <th width="14.28%">Cumartesi</th>
+                            <th width="14.28%">Pazar</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (int week = 0; week < 6; week++)
+                        {
+                            <tr>
+                                @for (int day = 0; day < 7; day++)
+                                {
+                                    var index = week * 7 + day;
+                                    var calDay = Model.CalendarDays[index];
+                                    var cellClass = "";
+                                    if (!calDay.IsCurrentMonth) cellClass += " bg-light text-muted";
+                                    if (calDay.IsToday) cellClass += " bg-info-subtle";
+                                    
+                                    <td class="calendar-day p-0 @cellClass" onclick="openDayModal('@calDay.Date.ToString("yyyy-MM-dd")')">
+                                        <div class="d-flex flex-column h-100 p-2 position-relative" style="min-height: 100px; cursor: pointer;">
+                                            <span class="fw-bold fs-5 @(calDay.IsToday ? "text-primary" : "")">@calDay.Day</span>
+                                            
+                                            @if (calDay.AppointmentCount > 0)
+                                            {
+                                                <div class="mt-auto text-center">
+                                                    <span class="badge bg-primary rounded-pill">
+                                                        @calDay.AppointmentCount Randevu
+                                                    </span>
+                                                </div>
+                                            }
+                                        </div>
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Day Appointments Modal -->
+<div class="modal fade" id="dayAppointmentsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="dayModalTitle">Randevular</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="dayModalBody">
+                <div class="text-center p-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Yükleniyor...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function filterByWorker() {
+            var workerId = document.getElementById('workerFilter').value;
+            var currentUrl = new URL(window.location.href);
+            if (workerId) {
+                currentUrl.searchParams.set('workerId', workerId);
+            } else {
+                currentUrl.searchParams.delete('workerId');
+            }
+            window.location.href = currentUrl.toString();
+        }
+
+        function openDayModal(date) {
+            var modal = new bootstrap.Modal(document.getElementById('dayAppointmentsModal'));
+            var workerId = document.getElementById('workerFilter').value;
+            
+            // Format date for title
+            var dateObj = new Date(date);
+            var options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('dayModalTitle').innerText = dateObj.toLocaleDateString('tr-TR', options);
+            
+            // Show modal
+            modal.show();
+            
+            // Load content
+            var url = '@Url.Action("GetDayAppointmentsPartial", "Dashboard")?date=' + date;
+            if (workerId) {
+                url += '&workerId=' + workerId;
+            }
+            
+            fetch(url)
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('dayModalBody').innerHTML = html;
+                })
+                .catch(error => {
+                    document.getElementById('dayModalBody').innerHTML = '<div class="alert alert-danger">Veriler yüklenirken hata oluştu.</div>';
+                    console.error('Error:', error);
+                });
+        }
+
+        function updateStatus(id, status) {
+            if (!confirm(status === 'cancelled' ? 'Randevuyu iptal etmek istediğinize emin misiniz?' : 'Randevuyu onaylamak istiyor musunuz?')) {
+                return;
+            }
+
+            // Since we are inside a modal, we'll use fetch to update without full page reload
+            // But for simplicity, we can submit a form or reload page. 
+            // Let's create a form dynamically and submit it to keep existing controller logic working
+            
+            var form = document.createElement('form');
+            form.method = 'post';
+            form.action = '@Url.Action("UpdateStatus", "Dashboard")';
+            
+            var idInput = document.createElement('input');
+            idInput.type = 'hidden';
+            idInput.name = 'id';
+            idInput.value = id;
+            
+            var statusInput = document.createElement('input');
+            statusInput.type = 'hidden';
+            statusInput.name = 'status';
+            statusInput.value = status;
+            
+            // Add CSRF token if present
+            var token = document.querySelector('input[name="__RequestVerificationToken"]');
+            if (token) {
+                var tokenInput = token.cloneNode(true);
+                form.appendChild(tokenInput);
+            }
+            
+            form.appendChild(idInput);
+            form.appendChild(statusInput);
+            document.body.appendChild(form);
+            form.submit();
+        }
+    </script>
+}

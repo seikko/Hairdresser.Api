@@ -1,0 +1,119 @@
+@model Hairdresser.Api.Models.ViewModels.WorkerViewModel
+@{
+    ViewData["Title"] = "Çalışan Düzenle";
+}
+
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-pencil"></i> Çalışan Düzenle: @Model.Name
+                </h5>
+            </div>
+            <div class="card-body">
+                <form asp-action="Edit" method="post">
+                    <input type="hidden" asp-for="Id" />
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label asp-for="Name" class="form-label"></label>
+                            <input asp-for="Name" class="form-control" placeholder="Çalışan adı" />
+                            <span asp-validation-for="Name" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Specialty" class="form-label"></label>
+                            <input asp-for="Specialty" class="form-control" placeholder="Örn: Erkek Kuaförü, Kadın Kuaförü" />
+                            <span asp-validation-for="Specialty" class="text-danger"></span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input asp-for="IsActive" class="form-check-input" />
+                            <label asp-for="IsActive" class="form-check-label"></label>
+                        </div>
+                    </div>
+
+                    <hr />
+
+                    <h5 class="mb-3">
+                        <i class="bi bi-clock"></i> Çalışma Saatleri
+                    </h5>
+
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead class="table-light">
+                                <tr>
+                                    <th width="30%">Gün</th>
+                                    <th width="15%">Çalışıyor</th>
+                                    <th width="25%">Başlangıç</th>
+                                    <th width="25%">Bitiş</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (int i = 0; i < Model.Schedules.Count; i++)
+                                {
+                                    <tr>
+                                        <td>
+                                            <input type="hidden" name="Schedules[@i].Id" value="@Model.Schedules[i].Id" />
+                                            <input type="hidden" name="Schedules[@i].DayOfWeek" value="@Model.Schedules[i].DayOfWeek" />
+                                            <input type="hidden" name="Schedules[@i].DayName" value="@Model.Schedules[i].DayName" />
+                                            <strong>@Model.Schedules[i].DayName</strong>
+                                        </td>
+                                        <td>
+                                            <div class="form-check">
+                                                <input type="checkbox" name="Schedules[@i].IsWorking" value="true" 
+                                                       class="form-check-input schedule-checkbox"
+                                                       data-row="@i"
+                                                       @(Model.Schedules[i].IsWorking ? "checked" : "") />
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <input type="time" name="Schedules[@i].StartTime" 
+                                                   value="@Model.Schedules[i].StartTime.ToString("HH:mm")"
+                                                   class="form-control form-control-sm time-input-@i"
+                                                   @(Model.Schedules[i].IsWorking ? "" : "disabled") />
+                                        </td>
+                                        <td>
+                                            <input type="time" name="Schedules[@i].EndTime" 
+                                                   value="@Model.Schedules[i].EndTime.ToString("HH:mm")"
+                                                   class="form-control form-control-sm time-input-@i"
+                                                   @(Model.Schedules[i].IsWorking ? "" : "disabled") />
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i> Güncelle
+                        </button>
+                        <a asp-action="Index" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> İptal
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.querySelectorAll('.schedule-checkbox').forEach(function(checkbox) {
+            checkbox.addEventListener('change', function() {
+                var row = this.dataset.row;
+                var inputs = document.querySelectorAll('.time-input-' + row);
+                inputs.forEach(function(input) {
+                    input.disabled = !checkbox.checked;
+                });
+            });
+        });
+    </script>
+}
+
