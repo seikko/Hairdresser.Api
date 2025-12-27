@@ -1,45 +1,31 @@
-# -------------------------
 # Build stage
-# -------------------------
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
 
-# Copy only the csproj first (for faster restore caching)
-COPY BookingAPI/BookingAPI.csproj BookingAPI/
-RUN dotnet restore BookingAPI/BookingAPI.csproj
+# Copy only the csproj first
+COPY Hairdresser.Api/Hairdresser.Api/Hairdresser.Api.csproj Hairdresser.Api/
+RUN dotnet restore Hairdresser.Api/Hairdresser.Api.csproj
 
 # Copy the rest of the project
-COPY BookingAPI/ BookingAPI/
+COPY Hairdresser.Api/ Hairdresser.Api/
 
 # Build
-WORKDIR /src/BookingAPI
-RUN dotnet build -c Release -o /app/build
+WORKDIR /src/Hairdresser.Api
+RUN dotnet build ./Hairdresser.Api.csproj -c Release -o /app/build
 
-# -------------------------
 # Publish stage
-# -------------------------
 FROM build AS publish
-RUN dotnet publish -c Release -o /app/publish /p:UseAppHost=false
+RUN dotnet publish ./Hairdresser.Api.csproj -c Release -o /app/publish /p:UseAppHost=false
 
-# -------------------------
 # Runtime stage
-# -------------------------
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final
 WORKDIR /app
 
-# Copy published files from publish stage
+# Copy published files
 COPY --from=publish /app/publish .
 
-# Expose port for App Platform / container
-EXPOSE 80
-
-# Ensure Kestrel listens on all interfaces
-ENV ASPNETCORE_URLS=http://+:80
+EXPOSE 8080
+ENV ASPNETCORE_URLS=http://+:8080
 ENV ASPNETCORE_ENVIRONMENT=Production
 
-# Optional: run as non-root (sağlık için)
-# ARG APP_UID=1000
-# RUN adduser -u $APP_UID -D appuser
-# USER appuser
-
-ENTRYPOINT ["dotnet", "BookingAPI.dll"]
+ENTRYPOINT ["dotnet", "Hairdresser.Api.dll"]
