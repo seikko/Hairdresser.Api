@@ -1,5 +1,17 @@
+# -------------------------
+# Base stage
+# -------------------------
+FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
+WORKDIR /app
+EXPOSE 8080
+ENV ASPNETCORE_URLS=http://+:8080
+ENV ASPNETCORE_ENVIRONMENT=Production
+
+# -------------------------
 # Build stage
+# -------------------------
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
 # Copy only the csproj first
@@ -11,21 +23,22 @@ COPY Hairdresser.Api/ Hairdresser.Api/
 
 # Build
 WORKDIR /src/Hairdresser.Api
-RUN dotnet build ./Hairdresser.Api.csproj -c Release -o /app/build
+RUN dotnet build ./Hairdresser.Api.csproj -c $BUILD_CONFIGURATION -o /app/build
 
+# -------------------------
 # Publish stage
+# -------------------------
 FROM build AS publish
-RUN dotnet publish ./Hairdresser.Api.csproj -c Release -o /app/publish /p:UseAppHost=false
+ARG BUILD_CONFIGURATION=Release
+RUN dotnet publish ./Hairdresser.Api.csproj -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
-# Runtime stage
-FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final
+# -------------------------
+# Final / Runtime stage
+# -------------------------
+FROM base AS final
 WORKDIR /app
 
 # Copy published files
 COPY --from=publish /app/publish .
-
-EXPOSE 8080
-ENV ASPNETCORE_URLS=http://+:8080
-ENV ASPNETCORE_ENVIRONMENT=Production
 
 ENTRYPOINT ["dotnet", "Hairdresser.Api.dll"]
