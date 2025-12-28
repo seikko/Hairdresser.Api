@@ -113,20 +113,22 @@ namespace Hairdresser.Api.Services
         {
             var message = @"ℹ️ *Yardım Menüsü*
 
+────────────────────
 *Kullanılabilir Komutlar:*
-📅 `/randevu` - Yeni randevu oluştur
-❌ `/iptal` - Mevcut randevuyu iptal et
-❓ `/yardim` - Bu yardım mesajını göster
+📆 `/randevu`  → Yeni randevu oluştur
+❌ `/iptal`     → Mevcut randevuyu iptal et
+💡 `/yardim`   → Bu yardım mesajını göster
 
-*Nasıl Çalışır:*
-1. `/randevu` yazın
-2. Çalışan seçin
-3. Tarih seçin
-4. Müsait saatleri görün
-5. Saat seçin
-6. Randevunuzu onaylayın
-
-Herhangi bir sorunuz varsa bizimle iletişime geçebilirsiniz!";
+────────────────────
+*Randevu Alma Adımları:*
+1️⃣ `/randevu` yazın
+2️⃣ Çalışan seçin
+3️⃣ Tarih seçin
+4️⃣ Müsait saatleri görüntüleyin
+5️⃣ Saat seçin
+6️⃣ ✅ Randevunuzu onaylayın
+────────────────────
+Sorularınız veya destek talepleriniz için lütfen bizimle iletişime geçiniz.";
 
             await _whatsAppService.SendTextMessageAsync(from, message);
         }
