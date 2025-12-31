@@ -1,13 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
 
-namespace BookingAPI.Controllers
+namespace Hairdresser.Api.Controllers;
+
+public class HomeController : Controller
 {
-    public class HomeController : Controller
+    public IActionResult Index()
     {
-        public IActionResult Index()
-        {
-            return RedirectToAction("Index", "Dashboard");
-        }
+        return RedirectToAction("Index", "Dashboard");
     }
 }
-

@@ -1,144 +1,130 @@
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
 using Hairdresser.Api.Models;
 using Hairdresser.Api.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
-namespace BookingAPI.Controllers
+namespace Hairdresser.Api.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+[AllowAnonymous]
+public class WebhookController(
+    IMessageHandler messageHandler,
+    IWhatsAppService whatsAppService,
+    IConfiguration configuration,
+    ILogger<WebhookController> logger)
+    : ControllerBase
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    [AllowAnonymous] // Webhook must be accessible without authentication
-    public class WebhookController : ControllerBase
+    /// <summary>
+    /// Webhook verification endpoint (GET)
+    /// Meta will call this to verify your webhook
+    /// </summary>
+    [HttpGet]
+    public IActionResult VerifyWebhook([FromQuery(Name = "hub.mode")] string mode,
+        [FromQuery(Name = "hub.verify_token")] string token,
+        [FromQuery(Name = "hub.challenge")] string challenge)
     {
-        private readonly IMessageHandler _messageHandler;
-        private readonly IWhatsAppService _whatsAppService;
-        private readonly IConfiguration _configuration;
-        private readonly ILogger<WebhookController> _logger;
+        logger.LogInformation("Webhook verification requested. Mode: {Mode}, Token: {Token}", mode, token);
 
-        public WebhookController(
-            IMessageHandler messageHandler,
-            IWhatsAppService whatsAppService,
-            IConfiguration configuration,
-            ILogger<WebhookController> logger)
+        var verifyToken = configuration["WhatsApp:VerifyToken"];
+
+        if (mode == "subscribe" && token == verifyToken)
         {
-            _messageHandler = messageHandler;
-            _whatsAppService = whatsAppService;
-            _configuration = configuration;
-            _logger = logger;
+            logger.LogInformation("Webhook verified successfully");
+            return Ok(challenge);
         }
 
-        /// <summary>
-        /// Webhook verification endpoint (GET)
-        /// Meta will call this to verify your webhook
-        /// </summary>
-        [HttpGet]
-        public IActionResult VerifyWebhook([FromQuery(Name = "hub.mode")] string mode,
-            [FromQuery(Name = "hub.verify_token")] string token,
-            [FromQuery(Name = "hub.challenge")] string challenge)
+        logger.LogWarning("Webhook verification failed. Invalid token. Expected: {Expected}, Received: {Received}",
+            verifyToken, token);
+        return StatusCode(403, "Forbidden: Invalid verify token");
+    }
+
+    /// <summary>
+    /// Webhook endpoint to receive messages (POST)
+    /// </summary>
+    [HttpPost]
+    public async Task<IActionResult> ReceiveWebhook([FromBody] WhatsAppWebhookPayload payload)
+    {
+        try
         {
-            _logger.LogInformation("Webhook verification requested. Mode: {Mode}, Token: {Token}", mode, token);
+            logger.LogInformation("Received webhook payload");
 
-            var verifyToken = _configuration["WhatsApp:VerifyToken"];
-
-            if (mode == "subscribe" && token == verifyToken)
+            if (payload.Object != "whatsapp_business_account")
             {
-                _logger.LogInformation("Webhook verified successfully");
-                return Ok(challenge);
+                logger.LogWarning("Received non-whatsapp payload: {Object}", payload.Object);
+                return Ok();
             }
 
-            _logger.LogWarning("Webhook verification failed. Invalid token. Expected: {Expected}, Received: {Received}",
-                verifyToken, token);
-            return StatusCode(403, "Forbidden: Invalid verify token");
-        }
-
-        /// <summary>
-        /// Webhook endpoint to receive messages (POST)
-        /// </summary>
-        [HttpPost]
-        public async Task<IActionResult> ReceiveWebhook([FromBody] WhatsAppWebhookPayload payload)
-        {
-            try
+            foreach (var entry in payload.Entry)
             {
-                _logger.LogInformation("Received webhook payload");
-
-                if (payload.Object != "whatsapp_business_account")
+                foreach (var change in entry.Changes)
                 {
-                    _logger.LogWarning("Received non-whatsapp payload: {Object}", payload.Object);
-                    return Ok();
-                }
+                    if (change.Field != "messages")
+                        continue;
 
-                foreach (var entry in payload.Entry)
-                {
-                    foreach (var change in entry.Changes)
+                    var value = change.Value;
+
+                    if (value.Messages != null)
                     {
-                        if (change.Field != "messages")
-                            continue;
-
-                        var value = change.Value;
-
-                        if (value.Messages != null)
+                        foreach (var message in value.Messages)
                         {
-                            foreach (var message in value.Messages)
+                            await whatsAppService.MarkMessageAsReadAsync(message.Id);
+
+                            string? senderName = null;
+                            if (value.Contacts != null)
                             {
-                                await _whatsAppService.MarkMessageAsReadAsync(message.Id);
+                                var contact = value.Contacts.FirstOrDefault(c => c.WaId == message.From);
+                                senderName = contact?.Profile?.Name;
+                            }
 
-                                string? senderName = null;
-                                if (value.Contacts != null)
+                            if (message.Type == "text" && message.Text != null)
+                            {
+                                await messageHandler.HandleIncomingMessageAsync(
+                                    message.From,
+                                    message.Text.Body,
+                                    senderName
+                                );
+                            }
+                            else if (message.Type == "interactive" && message.Interactive != null)
+                            {
+                                var interactive = message.Interactive;
+                                if (interactive.ButtonReply != null)
                                 {
-                                    var contact = value.Contacts.FirstOrDefault(c => c.WaId == message.From);
-                                    senderName = contact?.Profile?.Name;
-                                }
-
-                                if (message.Type == "text" && message.Text != null)
-                                {
-                                    await _messageHandler.HandleIncomingMessageAsync(
+                                    await messageHandler.HandleInteractiveReplyAsync(
                                         message.From,
-                                        message.Text.Body,
-                                        senderName
+                                        interactive.ButtonReply.Id,
+                                        interactive.ButtonReply.Title
                                     );
                                 }
-                                else if (message.Type == "interactive" && message.Interactive != null)
+                                else if (interactive.ListReply != null)
                                 {
-                                    var interactive = message.Interactive;
-                                    if (interactive.ButtonReply != null)
-                                    {
-                                        await _messageHandler.HandleInteractiveReplyAsync(
-                                            message.From,
-                                            interactive.ButtonReply.Id,
-                                            interactive.ButtonReply.Title
-                                        );
-                                    }
-                                    else if (interactive.ListReply != null)
-                                    {
-                                        await _messageHandler.HandleInteractiveReplyAsync(
-                                            message.From,
-                                            interactive.ListReply.Id,
-                                            interactive.ListReply.Title
-                                        );
-                                    }
+                                    await messageHandler.HandleInteractiveReplyAsync(
+                                        message.From,
+                                        interactive.ListReply.Id,
+                                        interactive.ListReply.Title
+                                    );
                                 }
-                            }
-                        }
-
-                        if (value.Statuses != null)
-                        {
-                            foreach (var status in value.Statuses)
-                            {
-                                _logger.LogInformation("Message status update: {MessageId} - {Status}", status.Id,
-                                    status.Status);
                             }
                         }
                     }
-                }
 
-                return Ok();
+                    if (value.Statuses != null)
+                    {
+                        foreach (var status in value.Statuses)
+                        {
+                            logger.LogInformation("Message status update: {MessageId} - {Status}", status.Id,
+                                status.Status);
+                        }
+                    }
+                }
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error processing webhook");
-                return Ok();
-            }
+
+            return Ok();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error processing webhook");
+            return Ok();
         }
     }
 }
-

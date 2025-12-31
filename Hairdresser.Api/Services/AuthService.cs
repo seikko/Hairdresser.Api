@@ -1,42 +1,31 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.Cookies;
 
-namespace Hairdresser.Api.Services
+namespace Hairdresser.Api.Services;
+
+public class AuthService(IConfiguration configuration, ILogger<AuthService> logger) : IAuthService
 {
-    public class AuthService : IAuthService
+    public Task<ClaimsPrincipal?> ValidateCredentialsAsync(string username, string password)
     {
-        private readonly IConfiguration _configuration;
-        private readonly ILogger<AuthService> _logger;
+        var adminUsername = configuration["AdminCredentials:Username"];
+        var adminPassword = configuration["AdminCredentials:Password"];
 
-        public AuthService(IConfiguration configuration, ILogger<AuthService> logger)
+        if (username == adminUsername && password == adminPassword)
         {
-            _configuration = configuration;
-            _logger = logger;
-        }
-
-        public Task<ClaimsPrincipal?> ValidateCredentialsAsync(string username, string password)
-        {
-            var adminUsername = _configuration["AdminCredentials:Username"];
-            var adminPassword = _configuration["AdminCredentials:Password"];
-
-            if (username == adminUsername && password == adminPassword)
+            var claims = new List<Claim>
             {
-                var claims = new List<Claim>
-                {
-                    new Claim(ClaimTypes.Name, username),
-                    new Claim(ClaimTypes.Role, "Admin")
-                };
+                new Claim(ClaimTypes.Name, username),
+                new Claim(ClaimTypes.Role, "Admin")
+            };
 
-                var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-                var principal = new ClaimsPrincipal(claimsIdentity);
+            var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+            var principal = new ClaimsPrincipal(claimsIdentity);
 
-                _logger.LogInformation("User {Username} authenticated successfully", username);
-                return Task.FromResult<ClaimsPrincipal?>(principal);
-            }
-
-            _logger.LogWarning("Failed authentication attempt for user {Username}", username);
-            return Task.FromResult<ClaimsPrincipal?>(null);
+            logger.LogInformation("User {Username} authenticated successfully", username);
+            return Task.FromResult<ClaimsPrincipal?>(principal);
         }
+
+        logger.LogWarning("Failed authentication attempt for user {Username}", username);
+        return Task.FromResult<ClaimsPrincipal?>(null);
     }
 }
-
