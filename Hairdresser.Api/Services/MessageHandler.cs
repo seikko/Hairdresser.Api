@@ -82,13 +82,14 @@ public class MessageHandler(
         else if (replyId == "confirm_no")
         {
             await conversationService.ClearStateAsync(from);
-            await whatsAppService.SendTextMessageAsync(from, "Randevu oluşturma iptal edildi. Yeni randevu için /randevu yazabilirsiniz.");
+            await whatsAppService.SendTextMessageAsync(from,
+                "Randevu oluşturma iptal edildi. Yeni randevu için /randevu yazabilirsiniz.");
         }
     }
 
     private async Task SendWelcomeMessageAsync(string from)
     {
-        var message = @"👋 Hoş geldiniz! Kuaför randevu sistemine hoş geldiniz.
+        const string message = @"👋Kuaför randevu sistemine hoş geldiniz!
 
 📅 *Randevu almak için:* /randevu
 ❌ *Randevuyu iptal etmek için:* /iptal
@@ -99,7 +100,7 @@ public class MessageHandler(
 
     private async Task SendHelpMessageAsync(string from)
     {
-        var message = @"ℹ️ *Yardım Menüsü*
+        const string message = @"ℹ️ *Yardım Menüsü*
 
 ────────────────────
 *Kullanılabilir Komutlar:*
@@ -127,7 +128,8 @@ Sorularınız veya destek talepleriniz için lütfen bizimle iletişime geçiniz
 
         if (workers.Count == 0)
         {
-            await whatsAppService.SendTextMessageAsync(from, "❌ Şu anda müsait çalışan bulunmamaktadır. Lütfen daha sonra tekrar deneyin.");
+            await whatsAppService.SendTextMessageAsync(from,
+                "❌ Şu anda müsait çalışan bulunmamaktadır. Lütfen daha sonra tekrar deneyin.");
             return;
         }
 
@@ -218,11 +220,13 @@ Sorularınız veya destek talepleriniz için lütfen bizimle iletişime geçiniz
         state.CurrentStep = ConversationStep.AwaitingTime;
         await conversationService.UpdateStateAsync(state);
 
-        var availableSlots = await bookingService.GetAvailableTimeSlotsForWorkerAsync(state.SelectedWorkerId.Value, selectedDate);
+        var availableSlots =
+            await bookingService.GetAvailableTimeSlotsForWorkerAsync(state.SelectedWorkerId.Value, selectedDate);
 
         if (availableSlots.Count == 0)
         {
-            await whatsAppService.SendTextMessageAsync(from, $"❌ {state.SelectedWorkerName} için bu tarihte müsait saat yok. Lütfen başka bir tarih seçin. /randevu");
+            await whatsAppService.SendTextMessageAsync(from,
+                $"❌ {state.SelectedWorkerName} için bu tarihte müsait saat yok. Lütfen başka bir tarih seçin. /randevu");
             await conversationService.ClearStateAsync(from);
             return;
         }
@@ -288,7 +292,8 @@ Sorularınız veya destek talepleriniz için lütfen bizimle iletişime geçiniz
 
         if (appointment == null)
         {
-            await whatsAppService.SendTextMessageAsync(from, "❌ Bu saat artık müsait değil. Lütfen başka bir saat seçin. /randevu");
+            await whatsAppService.SendTextMessageAsync(from,
+                "❌ Bu saat artık müsait değil. Lütfen başka bir saat seçin. /randevu");
             await conversationService.ClearStateAsync(from);
             return;
         }
@@ -348,16 +353,20 @@ Görüşmek üzere! 👋";
 
         if (success)
         {
-            await whatsAppService.SendTextMessageAsync(from, $"✅ Randevunuz (No: {appointmentId}) başarıyla iptal edildi.");
+            await whatsAppService.SendTextMessageAsync(from,
+                $"✅ Randevunuz (No: {appointmentId}) başarıyla iptal edildi.");
         }
         else
         {
-            await whatsAppService.SendTextMessageAsync(from, "❌ Randevu iptal edilemedi. Lütfen daha sonra tekrar deneyin.");
+            await whatsAppService.SendTextMessageAsync(from,
+                "❌ Randevu iptal edilemedi. Lütfen daha sonra tekrar deneyin.");
         }
     }
 
-    private async Task ProcessConversationStepAsync(string from, string messageText, ConversationState state, int userId)
+    private async Task ProcessConversationStepAsync(string from, string messageText, ConversationState state,
+        int userId)
     {
-        await whatsAppService.SendTextMessageAsync(from, "Lütfen yukarıdaki seçeneklerden birini seçin veya /randevu yazarak yeni bir randevu oluşturun.");
+        await whatsAppService.SendTextMessageAsync(from,
+            "Lütfen yukarıdaki seçeneklerden birini seçin veya /randevu yazarak yeni bir randevu oluşturun.");
     }
 }

@@ -28,9 +28,9 @@ public class AppointmentRepository(ApplicationDbContext context)
     public async Task<Appointment?> GetByWorkerDateAndTimeAsync(int workerId, DateOnly date, TimeOnly time)
     {
         return await _dbSet
-            .FirstOrDefaultAsync(a => a.WorkerId == workerId 
-                                      && a.AppointmentDate == date 
-                                      && a.AppointmentTime == time 
+            .FirstOrDefaultAsync(a => a.WorkerId == workerId
+                                      && a.AppointmentDate == date
+                                      && a.AppointmentTime == time
                                       && a.Status != "cancelled");
     }
 
