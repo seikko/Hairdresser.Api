@@ -7,6 +7,7 @@ public class MessageHandler(
     IWhatsAppService whatsAppService,
     IBookingService bookingService,
     IConversationService conversationService,
+    IAppointmentService appointmentService,
     ILogger<MessageHandler> logger)
     : IMessageHandler
 {
@@ -349,7 +350,7 @@ Görüşmek üzere! 👋";
             return;
         }
 
-        var success = await bookingService.CancelAppointmentAsync(userId, appointmentId);
+        var success = await appointmentService.DeleteAppointmentAsync(appointmentId);
 
         if (success)
         {
