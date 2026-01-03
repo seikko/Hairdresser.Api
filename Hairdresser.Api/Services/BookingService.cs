@@ -230,7 +230,7 @@ public class BookingService(IUnitOfWork unitOfWork, ILogger<BookingService> logg
 
     public async Task<List<Appointment>> GetUserAppointmentsAsync(int userId)
     {
-        var appointments = await unitOfWork.Appointments.GetByUserIdAsync(userId);
+        var appointments = await unitOfWork.Appointments.GetByUserIdForCancelAsync(userId);
         return appointments.ToList();
     }
 }

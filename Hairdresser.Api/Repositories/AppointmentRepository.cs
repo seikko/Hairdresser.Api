@@ -16,6 +16,21 @@ public class AppointmentRepository(ApplicationDbContext context)
             .ThenBy(a => a.AppointmentTime)
             .ToListAsync();
     }
+    
+    public async Task<IEnumerable<Appointment>> GetByUserIdForCancelAsync(int userId)
+    {
+        return await _dbSet
+            .Include(a => a.Worker)
+            .Where(a =>
+                a.UserId == userId &&
+                a.Status != "cancelled" &&
+                a.AppointmentDate >= DateOnly.FromDateTime(DateTime.Today) &&
+                a.AppointmentDate <= DateOnly.FromDateTime(DateTime.Today).AddDays(7)
+            )
+            .OrderBy(a => a.AppointmentDate)
+            .ThenBy(a => a.AppointmentTime)
+            .ToListAsync();
+    }
 
     public async Task<IEnumerable<Appointment>> GetByWorkerAndDateAsync(int workerId, DateOnly date)
     {
