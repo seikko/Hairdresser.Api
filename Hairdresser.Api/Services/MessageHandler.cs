@@ -332,6 +332,14 @@ Görüşmek üzere! 👋";
             $"{a.AppointmentDate:dd/MM/yyyy} {a.AppointmentTime:HH:mm}",
             (string?)$"{a.Worker?.Name ?? "Kuaför"} - No: {a.Id}"
         )).ToList();
+        
+        var state = new ConversationState
+        {
+            PhoneNumber = from,
+            CurrentStep = ConversationStep.CancellingAppointment
+        };
+
+        await conversationService.UpdateStateAsync(state);
 
         await whatsAppService.SendInteractiveListAsync(
             from,
