@@ -81,24 +81,24 @@ public class BookingService(IUnitOfWork unitOfWork, ILogger<BookingService> logg
         int dayOfWeek = (int)date.DayOfWeek;
         var workerSchedule = await unitOfWork.WorkerSchedules.GetByWorkerAndDayAsync(workerId, dayOfWeek);
 
-        if (workerSchedule == null)
+        if (workerSchedule == null || !workerSchedule.IsWorking)
             return new List<TimeOnly>();
 
         var slotDurationConfig = await unitOfWork.BusinessConfigs.GetByKeyAsync("slot_duration_minutes");
-        int slotDuration = int.TryParse(slotDurationConfig?.ConfigValue, out var parsed) ? parsed : 30; // 30 dk
+        int slotDuration = int.TryParse(slotDurationConfig?.ConfigValue, out var parsed) ? parsed : 30;
 
-        // 1️⃣ Tüm slotları oluştur
+        // Tüm slotları oluştur
         var allSlots = new List<TimeOnly>();
         var currentTime = workerSchedule.StartTime;
         var endTime = workerSchedule.EndTime;
 
-        while (currentTime <= endTime) // <= kullan
+        while (currentTime <= endTime) // <= ile endTime dahil
         {
             allSlots.Add(currentTime);
             currentTime = currentTime.AddMinutes(slotDuration);
         }
 
-        // 2️⃣ Doluları çıkar
+        // Randevuları çıkar
         var bookedAppointments = await unitOfWork.Appointments.GetByWorkerAndDateAsync(workerId, date);
         var bookedTimes = bookedAppointments.Select(a => a.AppointmentTime).ToList();
 
@@ -106,19 +106,15 @@ public class BookingService(IUnitOfWork unitOfWork, ILogger<BookingService> logg
             .Where(slot => !bookedTimes.Contains(slot))
             .ToList();
 
-        // 3️⃣ Bugünse geçmiş saatleri filtrele
+        // Bugünse geçmiş saatleri filtrele
         var nowInTurkey = GetTurkeyTime();
         var todayInTurkey = DateOnly.FromDateTime(nowInTurkey);
-
         if (date == todayInTurkey)
         {
             var currentTimeInTurkey = TimeOnly.FromDateTime(nowInTurkey);
-
             int remainder = currentTimeInTurkey.Minute % slotDuration;
             if (remainder != 0)
-            {
                 currentTimeInTurkey = currentTimeInTurkey.AddMinutes(slotDuration - remainder);
-            }
 
             availableSlots = availableSlots
                 .Where(slot => slot >= currentTimeInTurkey)
@@ -127,6 +123,7 @@ public class BookingService(IUnitOfWork unitOfWork, ILogger<BookingService> logg
 
         return availableSlots.OrderBy(t => t).ToList();
     }
+
 
 
     public async Task<Appointment?> CreateAppointmentAsync(int userId, int workerId, DateOnly date, TimeOnly time,
