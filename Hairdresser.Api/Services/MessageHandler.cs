@@ -234,7 +234,7 @@ Sorularınız veya destek talepleriniz için lütfen bizimle iletişime geçiniz
 
         var timeButtons = availableSlots
             .OrderBy(t => t)   // ⬅️ KRİTİK
-            .Take(20)
+            .Take(10)
             .Select(time => (
                 $"time_{time:HH:mm}",
                 time.ToString("HH:mm"),
