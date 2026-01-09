@@ -232,11 +232,15 @@ Sorularınız veya destek talepleriniz için lütfen bizimle iletişime geçiniz
             return;
         }
 
-        var timeButtons = availableSlots.Take(10).Select(time => (
-            $"time_{time:HH:mm}",
-            time.ToString("HH:mm"),
-            (string?)null
-        )).ToList();
+        var timeButtons = availableSlots
+            .OrderBy(t => t)   // ⬅️ KRİTİK
+            .Take(10)
+            .Select(time => (
+                $"time_{time:HH:mm}",
+                time.ToString("HH:mm"),
+                (string?)null
+            ))
+            .ToList();
 
         var formattedDate = selectedDate.ToString("dd MMMM yyyy", new CultureInfo("tr-TR"));
         await whatsAppService.SendInteractiveListAsync(
