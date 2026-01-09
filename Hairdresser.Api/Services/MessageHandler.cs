@@ -112,24 +112,27 @@ public class MessageHandler(
 
     private async Task SendWelcomeMessageAsync(string from)
     {
-        const string message = @"👋Kuaför randevu sistemine hoş geldiniz!
+        const string message = @"👋 *HakanYalçınkaya | Beauty* randevu sistemine hoş geldiniz!
 
 📅 *Randevu almak için:* /randevu
 ❌ *Randevuyu iptal etmek için:* /iptal
+📍 *Adres & yol tarifi için:* adres
+🔗 *Instagram:* @hakanyalcinkaya_beauty
 ❓ *Yardım için:* /yardim";
 
         await whatsAppService.SendTextMessageAsync(from, message);
     }
-
     private async Task SendHelpMessageAsync(string from)
     {
         const string message = @"ℹ️ *Yardım Menüsü*
 
 ────────────────────
 *Kullanılabilir Komutlar:*
-📆 `/randevu`  → Yeni randevu oluştur
+📆 `/randevu`   → Yeni randevu oluştur
 ❌ `/iptal`     → Mevcut randevuyu iptal et
-💡 `/yardim`   → Bu yardım mesajını göster
+📍 `adres`      → Konum & yol tarifi al
+🔗 `instagram`  → Instagram sayfamıza git
+💡 `/yardim`    → Bu yardım mesajını göster
 
 ────────────────────
 *Randevu Alma Adımları:*
@@ -139,8 +142,9 @@ public class MessageHandler(
 4️⃣ Müsait saatleri görüntüleyin
 5️⃣ Saat seçin
 6️⃣ ✅ Randevunuzu onaylayın
+
 ────────────────────
-Sorularınız veya destek talepleriniz için lütfen bizimle iletişime geçiniz.";
+Sorularınız veya destek talepleriniz için bizimle iletişime geçebilirsiniz.";
 
         await whatsAppService.SendTextMessageAsync(from, message);
     }
@@ -374,34 +378,40 @@ Görüşmek üzere! 👋";
             appointmentList
         );
     }
-    private async Task SendLocationAsync(string to)
-    {
-        double latitude  = 40.8238418;
-        double longitude = 29.3692247;
-        string name      = "HakanYalçınkaya Beauty";
-        string address   = "Gaziler Cd. No:95 D:b, 41420 Çayırova / Kocaeli";
 
-        await whatsAppService.SendLocationMessageAsync(
-            to,
-            latitude,
-            longitude,
-            name,
-            address
-        );
-    }
-    
-     
+    #region  Instagram , location
+
     private async Task SendInstagramButtonAsync(string to)
     {
-        await whatsAppService.SendInteractiveButtonsAsync(
-            to,
-            "📸 *HakanYalçınkaya | Beauty*\n\nInstagram sayfamıza gitmek ister misiniz?",
-            new List<(string id, string title)>
-            {
-                ("open_instagram", "Instagram’a Git")
-            }
-        );
+        var instagramUrl = "https://www.instagram.com/hakanyalcinkaya_beauty/";
+
+        var message =
+            "📸 *HakanYalçınkaya | Beauty*\n\n" +
+            "Instagram sayfamıza gitmek için aşağıdaki linke tıklayın 👇\n\n" +
+            instagramUrl;
+
+        await whatsAppService.SendTextMessageAsync(to, message);
     }
+    
+    private async Task SendLocationAsync(string to)
+        {
+            double latitude  = 40.8238418;
+            double longitude = 29.3692247;
+            string name      = "HakanYalçınkaya Beauty";
+            string address   = "Gaziler Cd. No:95 D:b, 41420 Çayırova / Kocaeli";
+    
+            await whatsAppService.SendLocationMessageAsync(
+                to,
+                latitude,
+                longitude,
+                name,
+                address
+            );
+        }
+    
+
+    #endregion
+    
     private async Task HandleAppointmentCancellationAsync(string from, string replyId, int userId)
     {
         var appointmentIdString = replyId.Replace("cancel_", "");
