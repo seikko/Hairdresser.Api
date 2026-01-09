@@ -13,6 +13,17 @@ public class MessageHandler(
 {
     public async Task HandleIncomingMessageAsync(string from, string messageText, string? senderName)
     {
+        #region  static command
+
+        string[] instagramCommands =
+        {
+            "/instagram", "instagram", "insta", "tasarım", "sosyal medya"
+        };
+        string[] addressCommands = { "/adres", "adres", "konum", "yoltarifi", "yol tarifi" };
+        #endregion
+        
+
+        
         logger.LogInformation("Processing message from {From}: {Message}", from, messageText);
 
         var user = await bookingService.GetOrCreateUserAsync(from, senderName);
@@ -26,11 +37,16 @@ public class MessageHandler(
         }
         var text = messageText.Trim().ToLower();
 
-        string[] addressCommands = { "/adres", "adres", "konum", "yoltarifi", "yol tarifi" };
-
+        
         if (addressCommands.Any(cmd => text.StartsWith(cmd)))
         {
             await SendLocationAsync(from);
+            return;
+        }
+
+        if (instagramCommands.Any(instagram => text.StartsWith(instagram)))
+        {
+            await SendInstagramButtonAsync(from);
             return;
         }
         if (messageText.Trim().ToLower().StartsWith("/iptal"))
@@ -38,13 +54,11 @@ public class MessageHandler(
             await StartCancellationFlowAsync(from, user.Id);
             return;
         }
-
         if (messageText.Trim().ToLower() == "/yardim" || messageText.Trim().ToLower() == "yardım")
         {
             await SendHelpMessageAsync(from);
             return;
         }
-
         if (state != null)
         {
             await ProcessConversationStepAsync(from, messageText, state, user.Id);
@@ -373,6 +387,19 @@ Görüşmek üzere! 👋";
             longitude,
             name,
             address
+        );
+    }
+    
+     
+    private async Task SendInstagramButtonAsync(string to)
+    {
+        await whatsAppService.SendInteractiveButtonsAsync(
+            to,
+            "📸 *HakanYalçınkaya | Beauty*\n\nInstagram sayfamıza gitmek ister misiniz?",
+            new List<(string id, string title)>
+            {
+                ("open_instagram", "Instagram’a Git")
+            }
         );
     }
     private async Task HandleAppointmentCancellationAsync(string from, string replyId, int userId)
