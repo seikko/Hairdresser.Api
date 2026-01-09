@@ -14,6 +14,8 @@ public class ConversationState
     public TimeOnly? SelectedTime { get; set; }
     public string? ServiceType { get; set; }
     public DateTime LastUpdated { get; set; } = DateTime.UtcNow;
+    public int? TimePage { get; set; }  // 0 = 09-17, 1 = 17-21
+
 }
 
 public enum ConversationStep
