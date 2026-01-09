@@ -81,7 +81,7 @@ public class BookingService(IUnitOfWork unitOfWork, ILogger<BookingService> logg
         int dayOfWeek = (int)date.DayOfWeek;
 
         var workerSchedule = await unitOfWork.WorkerSchedules.GetByWorkerAndDayAsync(workerId, dayOfWeek);
-
+        Console.WriteLine($"{workerId} {dayOfWeek.ToString()}");
         if (workerSchedule == null)
         {
             logger.LogInformation(
