@@ -24,7 +24,11 @@ public class MessageHandler(
             await StartBookingFlowAsync(from);
             return;
         }
-
+        if (messageText.Trim().ToLower().StartsWith("/adres")|| messageText.Trim().ToLower() == "adres")
+        {
+            await StartCancellationFlowAsync(from, user.Id);
+            return;
+        }
         if (messageText.Trim().ToLower().StartsWith("/iptal"))
         {
             await StartCancellationFlowAsync(from, user.Id);
@@ -352,7 +356,21 @@ Görüşmek üzere! 👋";
             appointmentList
         );
     }
+    private async Task SendLocationForHakanAsync(string to)
+    {
+        double latitude  = 40.8238418;
+        double longitude = 29.3692247;
+        string name      = "HakanYalçınkaya Beauty";
+        string address   = "Gaziler Cd. No:95 D:b, 41420 Çayırova / Kocaeli";
 
+        await whatsAppService.SendLocationMessageAsync(
+            to,
+            latitude,
+            longitude,
+            name,
+            address
+        );
+    }
     private async Task HandleAppointmentCancellationAsync(string from, string replyId, int userId)
     {
         var appointmentIdString = replyId.Replace("cancel_", "");

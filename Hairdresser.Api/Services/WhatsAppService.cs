@@ -130,7 +130,52 @@ public class WhatsAppService : IWhatsAppService
         _logger.LogInformation("Successfully sent interactive buttons to {To}", to);
         return true;
     }
+    public async Task<bool> SendLocationMessageAsync(
+        string to,
+        double latitude,
+        double longitude,
+        string name,
+        string address)
+    {
+        await EnsureAccessTokenAsync();
 
+        var payload = new
+        {
+            messaging_product = "whatsapp",
+            recipient_type = "individual",
+            to = to,
+            type = "location",
+            location = new
+            {
+                latitude = latitude,
+                longitude = longitude,
+                name = name,
+                address = address
+            }
+        };
+
+        var content = new StringContent(
+            JsonSerializer.Serialize(payload),
+            Encoding.UTF8,
+            "application/json"
+        );
+
+        var response = await _httpClient.PostAsync($"{_phoneNumberId}/messages", content);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorContent = await response.Content.ReadAsStringAsync();
+            _logger.LogError(
+                "Failed to send WhatsApp location. Status: {StatusCode}, Error: {Error}",
+                response.StatusCode,
+                errorContent
+            );
+            return false;
+        }
+
+        _logger.LogInformation("Successfully sent WhatsApp location to {To}", to);
+        return true;
+    }
     public async Task<bool> SendInteractiveListAsync(string to, string bodyText, string buttonText, List<(string id, string title, string? description)> rows)
     {
         await EnsureAccessTokenAsync();
