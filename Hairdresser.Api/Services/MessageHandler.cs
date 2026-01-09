@@ -24,9 +24,13 @@ public class MessageHandler(
             await StartBookingFlowAsync(from);
             return;
         }
-        if (messageText.Trim().ToLower().StartsWith("/adres")|| messageText.Trim().ToLower() == "adres")
+        var text = messageText.Trim().ToLower();
+
+        string[] addressCommands = { "/adres", "adres", "konum", "yoltarifi", "yol tarifi" };
+
+        if (addressCommands.Any(cmd => text.StartsWith(cmd)))
         {
-            await StartCancellationFlowAsync(from, user.Id);
+            await SendLocationAsync(from);
             return;
         }
         if (messageText.Trim().ToLower().StartsWith("/iptal"))
@@ -356,7 +360,7 @@ Görüşmek üzere! 👋";
             appointmentList
         );
     }
-    private async Task SendLocationForHakanAsync(string to)
+    private async Task SendLocationAsync(string to)
     {
         double latitude  = 40.8238418;
         double longitude = 29.3692247;
