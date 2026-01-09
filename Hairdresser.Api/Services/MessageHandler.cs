@@ -249,121 +249,137 @@ Sorularınız veya destek talepleriniz için bizimle iletişime geçebilirsiniz.
         );
     }
 
-    private async Task HandleDateSelectionAsync(string from, string replyId, ConversationState state, int userId)
+   private async Task HandleDateSelectionAsync(string from, string replyId, ConversationState state, int userId)
+{
+    var dateString = replyId.Replace("date_", "");
+    if (!DateOnly.TryParse(dateString, out var selectedDate))
     {
-        var dateString = replyId.Replace("date_", "");
-        if (!DateOnly.TryParse(dateString, out var selectedDate))
-        {
-            await whatsAppService.SendTextMessageAsync(from, "❌ Geçersiz tarih. Lütfen tekrar deneyin.");
-            return;
-        }
-
-        if (!state.SelectedWorkerId.HasValue)
-        {
-            await whatsAppService.SendTextMessageAsync(from, "❌ Lütfen önce bir çalışan seçin. /randevu");
-            await conversationService.ClearStateAsync(from);
-            return;
-        }
-
-        state.SelectedDate = selectedDate;
-        state.CurrentStep = ConversationStep.AwaitingTime;
-        await conversationService.UpdateStateAsync(state);
-
-        var availableSlots =
-            await bookingService.GetAvailableTimeSlotsForWorkerAsync(state.SelectedWorkerId.Value, selectedDate);
-
-        if (availableSlots.Count == 0)
-        {
-            await whatsAppService.SendTextMessageAsync(from,
-                $"❌ {state.SelectedWorkerName} için bu tarihte müsait saat yok. Lütfen başka bir tarih seçin. /randevu");
-            await conversationService.ClearStateAsync(from);
-            return;
-        }
-
-        var formattedDate = selectedDate.ToString("dd MMMM yyyy", new CultureInfo("tr-TR"));
-
-// Saatleri sırala
-        var timeRows = availableSlots
-            .OrderBy(t => t)
-            .Select(time => (
-                $"time_{time:HH:mm}",
-                time.ToString("HH:mm"),
-                (string?)null
-            ))
-            .ToList();
-
-// Sayfa 1: 09:00 - 17:00
-        var firstPage = timeRows
-            .Where(t => TimeOnly.Parse(t.Item2) < new TimeOnly(17, 0))
-            .ToList();
-
-// Sayfa 2: 17:00 - 21:00
-        var secondPage = timeRows
-            .Where(t => TimeOnly.Parse(t.Item2) >= new TimeOnly(17, 0))
-            .ToList();
-
-// Sayfa 1 + "Devam" butonu
-        if (secondPage.Count > 0)
-        {
-            firstPage.Add((
-                "time_page_2",
-                "➡️ 17:00 – 21:00",
-                "Akşam saatlerini göster"
-            ));
-        }
-
-// Gönderim
-        if (state.TimePage == null || state.TimePage == 0)
-        {
-            await whatsAppService.SendInteractiveListAsync(
-                from,
-                $"✅ Çalışan: *{state.SelectedWorkerName}*\n" +
-                $"📅 Tarih: *{formattedDate}*\n\n" +
-                $"🕐 Lütfen bir saat seçin (Bölüm 1):",
-                "Saat Seç",
-                firstPage
-            );
-        }
-        else if (state.TimePage == 1)
-        {
-            await whatsAppService.SendInteractiveListAsync(
-                from,
-                $"✅ Çalışan: *{state.SelectedWorkerName}*\n" +
-                $"📅 Tarih: *{formattedDate}*\n\n" +
-                $"🕐 Lütfen bir saat seçin (Bölüm 2):",
-                "Saat Seç",
-                secondPage
-            );
-        }
-
+        await whatsAppService.SendTextMessageAsync(from, "❌ Geçersiz tarih. Lütfen tekrar deneyin.");
+        return;
     }
 
-    private async Task HandleTimeSelectionAsync(string from, string replyId, ConversationState state, int userId)
+    if (!state.SelectedWorkerId.HasValue)
     {
-        var timeString = replyId.Replace("time_", "");
-        if (!TimeOnly.TryParse(timeString, out var selectedTime))
-        {
-            await whatsAppService.SendTextMessageAsync(from, "❌ Geçersiz saat. Lütfen tekrar deneyin.");
-            return;
-        }
+        await whatsAppService.SendTextMessageAsync(from, "❌ Lütfen önce bir çalışan seçin. /randevu");
+        await conversationService.ClearStateAsync(from);
+        return;
+    }
 
-        state.SelectedTime = selectedTime;
-        state.CurrentStep = ConversationStep.ConfirmingAppointment;
-        await conversationService.UpdateStateAsync(state);
+    state.SelectedDate = selectedDate;
+    state.CurrentStep = ConversationStep.AwaitingTime;
+    await conversationService.UpdateStateAsync(state);
 
-        var formattedDate = state.SelectedDate!.Value.ToString("dd MMMM yyyy", new CultureInfo("tr-TR"));
-        var formattedTime = selectedTime.ToString("HH:mm");
+    var availableSlots =
+        await bookingService.GetAvailableTimeSlotsForWorkerAsync(state.SelectedWorkerId.Value, selectedDate);
 
-        await whatsAppService.SendInteractiveButtonsAsync(
+    if (availableSlots.Count == 0)
+    {
+        await whatsAppService.SendTextMessageAsync(from,
+            $"❌ {state.SelectedWorkerName} için bu tarihte müsait saat yok. Lütfen başka bir tarih seçin. /randevu");
+        await conversationService.ClearStateAsync(from);
+        return;
+    }
+
+    var formattedDate = selectedDate.ToString("dd MMMM yyyy", new CultureInfo("tr-TR"));
+
+    // Saatleri sırala
+    var timeRows = availableSlots
+        .OrderBy(t => t)
+        .Select(time => (
+            $"time_{time:HH:mm}",
+            time.ToString("HH:mm"),
+            (string?)null
+        ))
+        .ToList();
+
+    // Sayfa 1: 09:00 - 17:00
+    var firstPage = timeRows
+        .Where(t => TimeOnly.Parse(t.Item2) < new TimeOnly(17, 0))
+        .ToList();
+
+    // Sayfa 2: 17:00 - 21:00
+    var secondPage = timeRows
+        .Where(t => TimeOnly.Parse(t.Item2) >= new TimeOnly(17, 0))
+        .ToList();
+
+    // Sayfa 1 + "Devam" butonu
+    if (secondPage.Count > 0 && (state.TimePage == null || state.TimePage == 0))
+    {
+        firstPage.Add((
+            "time_page_2",
+            "➡️ 17:00 – 21:00",
+            "Akşam saatlerini göster"
+        ));
+    }
+
+    // Gönderim
+    if (state.TimePage == null || state.TimePage == 0)
+    {
+        await whatsAppService.SendInteractiveListAsync(
             from,
-            $"✅ *Randevu Onayı*\n\n💇 Çalışan: *{state.SelectedWorkerName}*\n📅 Tarih: *{formattedDate}*\n🕐 Saat: *{formattedTime}*\n\nRandevunuzu onaylıyor musunuz?",
-            new List<(string id, string title)>
-            {
-                ("confirm_yes", "✅ Evet, Onayla"),
-                ("confirm_no", "❌ Hayır, İptal")
-            }
+            $"✅ Çalışan: *{state.SelectedWorkerName}*\n" +
+            $"📅 Tarih: *{formattedDate}*\n\n" +
+            $"🕐 Lütfen bir saat seçin (Bölüm 1):",
+            "Saat Seç",
+            firstPage
         );
     }
+    else if (state.TimePage == 1)
+    {
+        await whatsAppService.SendInteractiveListAsync(
+            from,
+            $"✅ Çalışan: *{state.SelectedWorkerName}*\n" +
+            $"📅 Tarih: *{formattedDate}*\n\n" +
+            $"🕐 Lütfen bir saat seçin (Bölüm 2):",
+            "Saat Seç",
+            secondPage
+        );
+    }
+}
+
+private async Task HandleTimeSelectionAsync(string from, string replyId, ConversationState state, int userId)
+{
+    // 👉 2. sayfa butonuna basıldıysa
+    if (replyId == "time_page_2")
+    {
+        state.TimePage = 1;
+        await conversationService.UpdateStateAsync(state);
+
+        // Aynı tarih için Bölüm 2 saatlerini göster
+        await HandleDateSelectionAsync(
+            from,
+            $"date_{state.SelectedDate}",
+            state,
+            userId
+        );
+        return;
+    }
+
+    var timeString = replyId.Replace("time_", "");
+    if (!TimeOnly.TryParse(timeString, out var selectedTime))
+    {
+        await whatsAppService.SendTextMessageAsync(from, "❌ Geçersiz saat. Lütfen tekrar deneyin.");
+        return;
+    }
+
+    state.SelectedTime = selectedTime;
+    state.CurrentStep = ConversationStep.ConfirmingAppointment;
+    state.TimePage = null; // reset
+    await conversationService.UpdateStateAsync(state);
+
+    var formattedDate = state.SelectedDate!.Value.ToString("dd MMMM yyyy", new CultureInfo("tr-TR"));
+    var formattedTime = selectedTime.ToString("HH:mm");
+
+    await whatsAppService.SendInteractiveButtonsAsync(
+        from,
+        $"✅ *Randevu Onayı*\n\n💇 Çalışan: *{state.SelectedWorkerName}*\n📅 Tarih: *{formattedDate}*\n🕐 Saat: *{formattedTime}*\n\nRandevunuzu onaylıyor musunuz?",
+        new List<(string id, string title)>
+        {
+            ("confirm_yes", "✅ Evet, Onayla"),
+            ("confirm_no", "❌ Hayır, İptal")
+        }
+    );
+}
 
     private async Task ConfirmAppointmentAsync(string from, ConversationState state, int userId)
     {
