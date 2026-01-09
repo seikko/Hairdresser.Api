@@ -258,9 +258,8 @@ Sorularınız veya destek talepleriniz için bizimle iletişime geçebilirsiniz.
             return;
         }
 
-        var timeButtons = availableSlots
-            .OrderBy(t => t)   // ⬅️ KRİTİK
-            .Take(10)
+        var timeRows = availableSlots
+            .OrderBy(t => t)
             .Select(time => (
                 $"time_{time:HH:mm}",
                 time.ToString("HH:mm"),
@@ -268,13 +267,29 @@ Sorularınız veya destek talepleriniz için bizimle iletişime geçebilirsiniz.
             ))
             .ToList();
 
+// WhatsApp limiti: 10 satır
+        var chunkedRows = timeRows
+            .Select((row, index) => new { row, index })
+            .GroupBy(x => x.index / 10)
+            .Select(g => g.Select(x => x.row).ToList())
+            .ToList();
+
         var formattedDate = selectedDate.ToString("dd MMMM yyyy", new CultureInfo("tr-TR"));
-        await whatsAppService.SendInteractiveListAsync(
-            from,
-            $"✅ Çalışan: *{state.SelectedWorkerName}*\n📅 Tarih: *{formattedDate}*\n\n🕐 Lütfen bir saat seçin:",
-            "Saat Seç",
-            timeButtons
-        );
+
+        int part = 1;
+        foreach (var chunk in chunkedRows)
+        {
+            await whatsAppService.SendInteractiveListAsync(
+                from,
+                $"✅ Çalışan: *{state.SelectedWorkerName}*\n" +
+                $"📅 Tarih: *{formattedDate}*\n\n" +
+                $"🕐 Lütfen bir saat seçin (Bölüm {part}):",
+                "Saat Seç",
+                chunk
+            );
+
+            part++;
+        }
     }
 
     private async Task HandleTimeSelectionAsync(string from, string replyId, ConversationState state, int userId)
