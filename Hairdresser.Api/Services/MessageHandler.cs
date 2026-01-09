@@ -37,7 +37,29 @@ public class MessageHandler(
         }
         var text = messageText.Trim().ToLower();
 
-        
+         
+        var interactiveId = messageText; // eğer button/list reply ID farklı bir alanla geliyorsa burayı değiştir
+        // Örnek: message.Interactive?.ListReply?.Id ?? message.Interactive?.ButtonReply?.Id;
+
+        if (!string.IsNullOrEmpty(interactiveId) && state != null)
+        {
+            // 👉 2. Sayfa butonu tıklandı
+            if (interactiveId == "time_page_2")
+            {
+                state.TimePage = 1;
+                await conversationService.UpdateStateAsync(state);
+
+                await HandleDateSelectionAsync(
+                    from,
+                    $"date_{state.SelectedDate}",
+                    state,
+                    user.Id
+                );
+                return;
+            }
+
+            // Diğer interactive mesajları buraya ekleyebilirsin
+        }
         if (addressCommands.Any(cmd => text.StartsWith(cmd)))
         {
             await SendLocationAsync(from);
@@ -258,6 +280,9 @@ Sorularınız veya destek talepleriniz için bizimle iletişime geçebilirsiniz.
             return;
         }
 
+        var formattedDate = selectedDate.ToString("dd MMMM yyyy", new CultureInfo("tr-TR"));
+
+// Saatleri sırala
         var timeRows = availableSlots
             .OrderBy(t => t)
             .Select(time => (
@@ -267,29 +292,50 @@ Sorularınız veya destek talepleriniz için bizimle iletişime geçebilirsiniz.
             ))
             .ToList();
 
-// WhatsApp limiti: 10 satır
-        var chunkedRows = timeRows
-            .Select((row, index) => new { row, index })
-            .GroupBy(x => x.index / 10)
-            .Select(g => g.Select(x => x.row).ToList())
+// Sayfa 1: 09:00 - 17:00
+        var firstPage = timeRows
+            .Where(t => TimeOnly.Parse(t.Item2) < new TimeOnly(17, 0))
             .ToList();
 
-        var formattedDate = selectedDate.ToString("dd MMMM yyyy", new CultureInfo("tr-TR"));
+// Sayfa 2: 17:00 - 21:00
+        var secondPage = timeRows
+            .Where(t => TimeOnly.Parse(t.Item2) >= new TimeOnly(17, 0))
+            .ToList();
 
-        int part = 1;
-        foreach (var chunk in chunkedRows)
+// Sayfa 1 + "Devam" butonu
+        if (secondPage.Count > 0)
+        {
+            firstPage.Add((
+                "time_page_2",
+                "➡️ 17:00 – 21:00",
+                "Akşam saatlerini göster"
+            ));
+        }
+
+// Gönderim
+        if (state.TimePage == null || state.TimePage == 0)
         {
             await whatsAppService.SendInteractiveListAsync(
                 from,
                 $"✅ Çalışan: *{state.SelectedWorkerName}*\n" +
                 $"📅 Tarih: *{formattedDate}*\n\n" +
-                $"🕐 Lütfen bir saat seçin (Bölüm {part}):",
+                $"🕐 Lütfen bir saat seçin (Bölüm 1):",
                 "Saat Seç",
-                chunk
+                firstPage
             );
-
-            part++;
         }
+        else if (state.TimePage == 1)
+        {
+            await whatsAppService.SendInteractiveListAsync(
+                from,
+                $"✅ Çalışan: *{state.SelectedWorkerName}*\n" +
+                $"📅 Tarih: *{formattedDate}*\n\n" +
+                $"🕐 Lütfen bir saat seçin (Bölüm 2):",
+                "Saat Seç",
+                secondPage
+            );
+        }
+
     }
 
     private async Task HandleTimeSelectionAsync(string from, string replyId, ConversationState state, int userId)
