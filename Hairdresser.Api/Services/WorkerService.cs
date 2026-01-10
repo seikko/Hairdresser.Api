@@ -133,6 +133,53 @@ public class WorkerService(IUnitOfWork unitOfWork, ILogger<WorkerService> logger
         return services.ToList();
     }
 
+    public async Task<WorkerServiceEntity> GetWorkerServiceByIdAsync(int serviceId)
+    {
+        var service = await unitOfWork.WorkerService.GetByIdAsync(serviceId);
+        return service;
+    }
+
+    public async Task<WorkerServiceEntity> UpdateWorkerServiceEntityAsync(WorkerServiceEntity entity)
+    {
+        if (entity == null)
+            throw new ArgumentNullException(nameof(entity));
+
+        var existingService = await unitOfWork.WorkerService.GetByIdAsync(entity.Id);
+        if (existingService == null)
+            throw new KeyNotFoundException($"Service with Id {entity.Id} not found.");
+
+        existingService.ServiceName = entity.ServiceName;
+        existingService.DurationMinutes = entity.DurationMinutes;
+        existingService.Price = entity.Price;
+        unitOfWork.WorkerService.Update(existingService);
+        await unitOfWork.SaveChangesAsync();
+        return existingService;
+    }
+
+    public async Task<bool> DeleteWorkerServiceEntityAsync(int id)
+    {
+        try
+        {
+            var entity = await unitOfWork.WorkerService.GetByIdAsync(id);
+            if (entity == null)
+            {
+                return false;  
+            }
+
+            unitOfWork.WorkerService.Remove(entity);
+            await unitOfWork.SaveChangesAsync();
+
+            logger.LogInformation("Deleted WorkerService: {ServiceId} - {ServiceName}", entity.Id, entity.ServiceName);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to delete WorkerService with Id {ServiceId}", id);
+            return false;
+        }
+    }
+
+
     public async Task<IEnumerable<Worker>> GetActiveWorkersAsync()
     {
         var workers = await unitOfWork.Workers.GetActiveWorkersAsync();

@@ -24,6 +24,78 @@ public class WorkersController(IWorkerService workerService) : Controller
         };
         return View(viewModel);
     }
+    public async Task<IActionResult> IndexWorkerService()
+    {
+        var services = await workerService.GetAllServicesAsync();
+        return View(services); 
+    }
+    public async Task<IActionResult> EditWorkerService(int id)
+    {
+        var service = await workerService.GetWorkerServiceByIdAsync(id);
+        if (service == null) return NotFound();
+
+        var viewModel = new WorkerServiceViewModel
+        {
+            ServiceName = service.ServiceName,
+            DurationMinutes = service.DurationMinutes,
+            Price = service.Price
+        };
+
+        return View(viewModel);
+    }
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> EditWorkerService(WorkerServiceViewModel model)
+    {
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
+
+        try
+        {
+            var entity = new WorkerServiceEntity
+            {
+                Id = model.Id,
+                ServiceName = model.ServiceName,
+                DurationMinutes = model.DurationMinutes,
+                Price = model.Price
+            };
+            var updated = await workerService.UpdateWorkerServiceEntityAsync(entity);
+            if (updated != null)
+            {
+                TempData["Success"] = $"{model.ServiceName} hizmeti başarıyla güncellendi.";
+                return RedirectToAction(nameof(IndexWorkerService));
+            }
+            else
+            {
+                TempData["Error"] = "Hizmet güncellenemedi!";
+                return View(model);
+            }
+        }
+        catch (Exception ex)
+        {
+            TempData["Error"] = $"Hata: {ex.Message}";
+            return View(model);
+        }
+    }
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteWorkerService(int id)
+    {
+        var result = await workerService.DeleteWorkerServiceEntityAsync(id);
+        if (result)
+        {
+            TempData["Success"] = "Hizmet başarıyla silindi.";
+        }
+        else
+        {
+            TempData["Error"] = "Hizmet silinemedi!";
+        }
+
+        return RedirectToAction(nameof(IndexWorkerService));
+    }
+ 
 
     [HttpPost]
     [ValidateAntiForgeryToken]
@@ -77,8 +149,8 @@ public class WorkersController(IWorkerService workerService) : Controller
         {
             return NotFound();
         }
-        var services = await workerService.GetWorkerServiceEntityByIdAsync(worker.Id);
-
+        var services = await workerService.GetAllServicesAsync();
+var mapping = await workerService.GetWorkerServiceEntityByIdAsync(worker.Id);
         var viewModel = new WorkerViewModel
         {
             Id = worker.Id,
@@ -86,6 +158,7 @@ public class WorkersController(IWorkerService workerService) : Controller
             Specialty = worker.Specialty,
             IsActive = worker.IsActive,
             Schedules = GetSchedulesForWorker(worker),
+            SelectedServiceIds = mapping.Select(s => s.Id).ToList(),
             AvailableServices = services.Select(s => new WorkerServiceViewModel
             {
                 Id = s.Id,

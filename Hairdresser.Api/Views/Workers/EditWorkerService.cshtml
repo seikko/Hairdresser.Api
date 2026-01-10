@@ -1,0 +1,77 @@
+@model Hairdresser.Api.Models.ViewModels.WorkerServiceViewModel
+
+@{
+    ViewData["Title"] = "Hizmet Düzenle";
+}
+
+<div class="row">
+    <div class="col-md-6 offset-md-3">
+        <div class="card shadow-sm">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">
+                    <i class="bi bi-pencil"></i> Hizmet Düzenle
+                </h5>
+            </div>
+
+            <div class="card-body">
+                <form asp-action="EditWorkerService" method="post">
+                    @Html.AntiForgeryToken()
+
+                    <input type="hidden" asp-for="Id" />
+
+                    <div asp-validation-summary="ModelOnly"
+                         class="alert alert-danger"></div>
+
+                    <!-- Hizmet Adı -->
+                    <div class="mb-3">
+                        <label asp-for="ServiceName" class="form-label"></label>
+                        <input asp-for="ServiceName"
+                               class="form-control"
+                               placeholder="Örn: Saç Kesimi" />
+                        <span asp-validation-for="ServiceName"
+                              class="text-danger"></span>
+                    </div>
+
+                    <!-- Süre -->
+                    <div class="mb-3">
+                        <label asp-for="DurationMinutes" class="form-label"></label>
+                        <input asp-for="DurationMinutes"
+                               type="number"
+                               min="5"
+                               class="form-control"
+                               placeholder="Dakika" />
+                        <span asp-validation-for="DurationMinutes"
+                              class="text-danger"></span>
+                    </div>
+
+                    <!-- Fiyat -->
+                    <div class="mb-3">
+                        <label asp-for="Price" class="form-label"></label>
+                        <input asp-for="Price"
+                               type="number"
+                               step="0.01"
+                               class="form-control"
+                               placeholder="₺" />
+                        <span asp-validation-for="Price"
+                              class="text-danger"></span>
+                    </div>
+
+                    <div class="d-flex justify-content-between mt-4">
+                        <button type="submit" class="btn btn-warning">
+                            <i class="bi bi-check-circle"></i> Güncelle
+                        </button>
+
+                        <a asp-action="IndexWorkerService"
+                           class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> İptal
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
