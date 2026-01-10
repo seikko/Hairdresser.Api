@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Hairdresser.Api.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251227190304_Initial")]
+    [Migration("20260109235729_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -58,6 +58,9 @@ namespace Hairdresser.Api.Migrations
                         .HasColumnType("text")
                         .HasColumnName("notes");
 
+                    b.Property<int?>("ServiceId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("ServiceType")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)")
@@ -86,6 +89,8 @@ namespace Hairdresser.Api.Migrations
                         .HasColumnName("worker_id");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ServiceId");
 
                     b.HasIndex("UserId");
 
@@ -246,8 +251,58 @@ namespace Hairdresser.Api.Migrations
                     b.ToTable("worker_schedules", (string)null);
                 });
 
+            modelBuilder.Entity("Hairdresser.Api.Models.WorkerServiceEntity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("DurationMinutes")
+                        .HasColumnType("integer")
+                        .HasColumnName("duration_minutes");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("numeric")
+                        .HasColumnName("price");
+
+                    b.Property<string>("ServiceName")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("service_name");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("worker_services", (string)null);
+                });
+
+            modelBuilder.Entity("Hairdresser.Api.Models.WorkerServiceMapping", b =>
+                {
+                    b.Property<int>("WorkerId")
+                        .HasColumnType("integer")
+                        .HasColumnName("worker_id")
+                        .HasColumnOrder(0);
+
+                    b.Property<int>("ServiceId")
+                        .HasColumnType("integer")
+                        .HasColumnName("service_id")
+                        .HasColumnOrder(1);
+
+                    b.HasKey("WorkerId", "ServiceId");
+
+                    b.HasIndex("ServiceId");
+
+                    b.ToTable("worker_service_mapping", (string)null);
+                });
+
             modelBuilder.Entity("Hairdresser.Api.Models.Appointment", b =>
                 {
+                    b.HasOne("Hairdresser.Api.Models.WorkerServiceEntity", "Service")
+                        .WithMany()
+                        .HasForeignKey("ServiceId");
+
                     b.HasOne("Hairdresser.Api.Models.User", "User")
                         .WithMany("Appointments")
                         .HasForeignKey("UserId")
@@ -259,6 +314,8 @@ namespace Hairdresser.Api.Migrations
                         .HasForeignKey("WorkerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Service");
 
                     b.Navigation("User");
 
@@ -272,6 +329,25 @@ namespace Hairdresser.Api.Migrations
                         .HasForeignKey("WorkerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Worker");
+                });
+
+            modelBuilder.Entity("Hairdresser.Api.Models.WorkerServiceMapping", b =>
+                {
+                    b.HasOne("Hairdresser.Api.Models.WorkerServiceEntity", "Service")
+                        .WithMany()
+                        .HasForeignKey("ServiceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Hairdresser.Api.Models.Worker", "Worker")
+                        .WithMany()
+                        .HasForeignKey("WorkerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Service");
 
                     b.Navigation("Worker");
                 });

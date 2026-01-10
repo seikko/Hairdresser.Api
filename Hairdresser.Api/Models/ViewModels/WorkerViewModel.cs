@@ -17,8 +17,10 @@ public class WorkerViewModel
 
     [Display(Name = "Aktif")]
     public bool IsActive { get; set; } = true;
+    public List<WorkerServiceViewModel> AvailableServices { get; set; } = new();
 
     public List<WorkerScheduleViewModel> Schedules { get; set; } = new();
+    public List<int> SelectedServiceIds { get; set; } = new();
 }
 
 public class WorkerScheduleViewModel
@@ -46,4 +48,13 @@ public class WorkerListViewModel
     public int TotalAppointments { get; set; }
     public int TodayAppointments { get; set; }
     public string WorkingDays { get; set; } = "";
+}
+public class WorkerServiceViewModel
+{
+    public int Id { get; set; }
+    public int WorkerId { get; set; }
+    public string ServiceName { get; set; } = null!;
+    public int DurationMinutes { get; set; }
+    public decimal Price { get; set; }
+    public Worker? Worker { get; set; }
 }

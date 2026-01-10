@@ -9,7 +9,7 @@ public class UnitOfWork(
     IWorkerRepository workers,
     IWorkerScheduleRepository workerSchedules,
     IAppointmentRepository appointments,
-    IBusinessConfigRepository businessConfigs)
+    IBusinessConfigRepository businessConfigs,IWorkerServiceEntityRepository workerService,IWorkerServiceMappingRepository workerServiceMapping)
     : IUnitOfWork
 {
     private IDbContextTransaction? _transaction;
@@ -19,6 +19,8 @@ public class UnitOfWork(
     public IWorkerScheduleRepository WorkerSchedules { get; } = workerSchedules;
     public IAppointmentRepository Appointments { get; } = appointments;
     public IBusinessConfigRepository BusinessConfigs { get; } = businessConfigs;
+    public IWorkerServiceEntityRepository WorkerService { get; }  = workerService;
+    public IWorkerServiceMappingRepository  WorkerServiceMapping { get; }  = workerServiceMapping;
 
     public async Task<int> SaveChangesAsync()
     {

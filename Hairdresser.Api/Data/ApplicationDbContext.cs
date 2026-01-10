@@ -10,6 +10,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Worker> Workers { get; set; }
     public DbSet<WorkerSchedule> WorkerSchedules { get; set; }
     public DbSet<BusinessConfig> BusinessConfigs { get; set; }
+    public DbSet<WorkerServiceEntity> WorkerServices { get; set; }
+    public DbSet<WorkerServiceMapping>  WorkerServiceMapping { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -23,7 +25,29 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("NOW()");
             entity.Property(e => e.LastContact).HasDefaultValueSql("NOW()");
         });
+        modelBuilder.Entity<WorkerServiceEntity>(entity =>
+        {
+            entity.ToTable("worker_services");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.ServiceName).IsRequired();
+            entity.Property(e => e.DurationMinutes).IsRequired();
+            entity.Property(e => e.Price).IsRequired();
+        });
 
+        // WorkerServiceMapping tablosu (many-to-many)
+        modelBuilder.Entity<WorkerServiceMapping>(entity =>
+        {
+            entity.ToTable("worker_service_mapping");
+            entity.HasKey(e => new { e.WorkerId, e.ServiceId }); // composite key
+
+            entity.HasOne(e => e.Worker)
+                .WithMany()
+                .HasForeignKey(e => e.WorkerId);
+
+            entity.HasOne(e => e.Service)
+                .WithMany()
+                .HasForeignKey(e => e.ServiceId);
+        });
         modelBuilder.Entity<Worker>(entity =>
         {
             entity.ToTable("workers");

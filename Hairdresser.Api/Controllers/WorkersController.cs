@@ -15,11 +15,12 @@ public class WorkersController(IWorkerService workerService) : Controller
         return View(workers);
     }
 
-    public IActionResult Create()
+    public async Task<IActionResult> Create()
     {
         var viewModel = new WorkerViewModel
         {
-            Schedules = GetDefaultSchedules()
+            Schedules = GetDefaultSchedules(),
+            AvailableServices =  await workerService.GetAllServicesAsync()
         };
         return View(viewModel);
     }
@@ -30,6 +31,7 @@ public class WorkersController(IWorkerService workerService) : Controller
     {
         if (ModelState.IsValid)
         {
+            // 1️⃣ Worker entity oluştur
             var worker = new Worker
             {
                 Name = viewModel.Name,
@@ -37,6 +39,7 @@ public class WorkersController(IWorkerService workerService) : Controller
                 IsActive = viewModel.IsActive
             };
 
+            // 2️⃣ Çalışma saatleri
             var schedules = viewModel.Schedules
                 .Where(s => s.IsWorking)
                 .Select(s => new WorkerSchedule
@@ -45,9 +48,12 @@ public class WorkersController(IWorkerService workerService) : Controller
                     StartTime = s.StartTime,
                     EndTime = s.EndTime,
                     IsWorking = true
-                });
+                }).ToList();
 
-            await workerService.CreateWorkerAsync(worker, schedules);
+            // 3️⃣ Seçilen hizmet Id’leri
+            var selectedServiceIds = viewModel.SelectedServiceIds ?? new List<int>();
+
+            await workerService.CreateWorkerAsync(worker, schedules, selectedServiceIds);
 
             TempData["Success"] = $"{worker.Name} başarıyla eklendi.";
             return RedirectToAction(nameof(Index));
@@ -56,6 +62,7 @@ public class WorkersController(IWorkerService workerService) : Controller
         viewModel.Schedules = GetDefaultSchedules();
         return View(viewModel);
     }
+
 
     public async Task<IActionResult> Edit(int? id)
     {
@@ -70,6 +77,7 @@ public class WorkersController(IWorkerService workerService) : Controller
         {
             return NotFound();
         }
+        var services = await workerService.GetWorkerServiceEntityByIdAsync(worker.Id);
 
         var viewModel = new WorkerViewModel
         {
@@ -77,7 +85,14 @@ public class WorkersController(IWorkerService workerService) : Controller
             Name = worker.Name,
             Specialty = worker.Specialty,
             IsActive = worker.IsActive,
-            Schedules = GetSchedulesForWorker(worker)
+            Schedules = GetSchedulesForWorker(worker),
+            AvailableServices = services.Select(s => new WorkerServiceViewModel
+            {
+                Id = s.Id,
+                ServiceName = s.ServiceName,
+                DurationMinutes = s.DurationMinutes,
+                Price = s.Price
+            }).ToList()
         };
 
         return View(viewModel);
@@ -117,7 +132,7 @@ public class WorkersController(IWorkerService workerService) : Controller
             {
                 return NotFound();
             }
-
+  await workerService.UpdateWorkerServicesAsync(viewModel.Id, viewModel.SelectedServiceIds);
             TempData["Success"] = $"{worker.Name} başarıyla güncellendi.";
             return RedirectToAction(nameof(Index));
         }
@@ -172,6 +187,30 @@ public class WorkersController(IWorkerService workerService) : Controller
 
         TempData["Success"] = $"{workerName} durumu güncellendi.";
         return RedirectToAction(nameof(Index));
+    }
+    
+    
+    public IActionResult CreateWorkerService()
+    {
+        var model = new ServiceViewModel();
+        return View(model);
+    }
+    
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CreateWorkerService(ServiceViewModel model)
+    {
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
+      var result =   await workerService.CreateWorkerServiceEntityAsync(model);
+      if (result)
+      {
+        TempData["Success"] = $"{model.ServiceName} başarıyla eklendi!";
+      }
+        TempData["Error"] = $"{model.ServiceName}   eklenemedi!";
+        return RedirectToAction("Index");
     }
 
     private List<WorkerScheduleViewModel> GetDefaultSchedules()

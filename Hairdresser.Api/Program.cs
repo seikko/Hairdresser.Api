@@ -40,6 +40,8 @@ builder.Services.AddScoped<IWorkerRepository, WorkerRepository>();
 builder.Services.AddScoped<IWorkerScheduleRepository, WorkerScheduleRepository>();
 builder.Services.AddScoped<IAppointmentRepository, AppointmentRepository>();
 builder.Services.AddScoped<IBusinessConfigRepository, BusinessConfigRepository>();
+builder.Services.AddScoped<IWorkerServiceEntityRepository, WorkerServiceEntityRepository>();
+builder.Services.AddScoped<IWorkerServiceMappingRepository, WorkerServiceMappingRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 builder.Services.AddScoped<IAuthService, AuthService>();

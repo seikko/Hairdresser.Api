@@ -9,8 +9,19 @@ public interface IWorkerService
     Task<IEnumerable<Worker>> GetActiveWorkersAsync();
     Task<Worker?> GetWorkerByIdAsync(int id);
     Task<Worker?> GetWorkerWithSchedulesAsync(int id);
-    Task<Worker> CreateWorkerAsync(Worker worker, IEnumerable<WorkerSchedule> schedules);
+
+    Task<Worker> CreateWorkerAsync(
+        Worker worker,
+        IEnumerable<WorkerSchedule> schedules,
+        IEnumerable<int> selectedServiceIds);
     Task<bool> UpdateWorkerAsync(int id, Worker worker, IEnumerable<WorkerSchedule> schedules);
     Task<bool> ToggleWorkerActiveStatusAsync(int id);
     Task<bool> DeleteWorkerAsync(int id);
+    
+    
+
+    Task<bool> CreateWorkerServiceEntityAsync(ServiceViewModel workerServiceViewModel);
+    Task<bool> UpdateWorkerServicesAsync(int workerId, IEnumerable<int> selectedServiceIds);
+    Task<List<WorkerServiceViewModel>> GetAllServicesAsync();
+    Task<List<WorkerServiceEntity>> GetWorkerServiceEntityByIdAsync(int workerId);
 }

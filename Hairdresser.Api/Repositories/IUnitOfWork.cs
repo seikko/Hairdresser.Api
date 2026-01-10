@@ -7,6 +7,8 @@ public interface IUnitOfWork : IDisposable
     IWorkerScheduleRepository WorkerSchedules { get; }
     IAppointmentRepository Appointments { get; }
     IBusinessConfigRepository BusinessConfigs { get; }
+    IWorkerServiceEntityRepository WorkerService { get; }
+    IWorkerServiceMappingRepository WorkerServiceMapping { get; }
         
     Task<int> SaveChangesAsync();
     Task BeginTransactionAsync();

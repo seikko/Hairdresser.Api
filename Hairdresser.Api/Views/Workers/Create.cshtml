@@ -14,7 +14,8 @@
             <div class="card-body">
                 <form asp-action="Create" method="post">
                     <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
-                    
+
+                    <!-- Çalışan Bilgileri -->
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <label asp-for="Name" class="form-label"></label>
@@ -37,6 +38,28 @@
 
                     <hr />
 
+                    <!-- Çoklu Hizmet Seçimi -->
+                    <div class="mb-3">
+                        <label class="form-label"><i class="bi bi-scissors"></i> Hizmetler</label>
+                        <div class="form-check">
+                            @foreach (var service in Model.AvailableServices)
+                            {
+                                <div class="form-check">
+                                    <input type="checkbox" 
+                                           name="SelectedServiceIds" 
+                                           value="@service.Id" 
+                                           class="form-check-input" 
+                                           id="service_@service.Id" />
+                                    <label class="form-check-label" for="service_@service.Id">
+                                        @service.ServiceName (@service.DurationMinutes dk - @service.Price ₺)
+                                    </label>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                    <hr />
+
+                    <!-- Çalışma Saatleri -->
                     <h5 class="mb-3">
                         <i class="bi bi-clock"></i> Çalışma Saatleri
                     </h5>
@@ -103,6 +126,7 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
+        // Çalışma saatleri checkbox toggle
         document.querySelectorAll('.schedule-checkbox').forEach(function(checkbox) {
             checkbox.addEventListener('change', function() {
                 var row = this.dataset.row;
@@ -114,4 +138,3 @@
         });
     </script>
 }
-

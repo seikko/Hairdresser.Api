@@ -35,6 +35,103 @@ public class WorkerService(IUnitOfWork unitOfWork, ILogger<WorkerService> logger
             
         return viewModels;
     }
+    // <summary>
+    public async Task<bool> CreateWorkerServiceEntityAsync(ServiceViewModel workerServiceViewModel)
+    {
+        try
+        {
+            var workerServiceEntity = new WorkerServiceEntity
+            {
+                ServiceName = workerServiceViewModel.ServiceName,
+                DurationMinutes = workerServiceViewModel.DurationMinutes,
+                Price = workerServiceViewModel.Price
+            };
+
+            await unitOfWork.WorkerService.AddAsync(workerServiceEntity);
+            await unitOfWork.SaveChangesAsync();
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to create worker service: {ServiceName}", workerServiceViewModel.ServiceName);
+            return false;
+        }
+    }
+
+    public async Task<bool> UpdateWorkerServicesAsync(int workerId, IEnumerable<int> selectedServiceIds)
+    {
+        try
+        {
+            // 1️⃣ Mevcut mappingleri al
+            var existingMappings = await unitOfWork.WorkerServiceMapping
+                .FindAsync(m => m.WorkerId == workerId);
+
+            // 2️⃣ Eski mappingleri sil
+            if (existingMappings.Any())
+            {
+                unitOfWork.WorkerServiceMapping.RemoveRange(existingMappings);
+            }
+
+            // 3️⃣ Yeni seçilen hizmetleri mapping tablosuna ekle
+            if (selectedServiceIds != null && selectedServiceIds.Any())
+            {
+                var newMappings = selectedServiceIds.Select(serviceId => new WorkerServiceMapping
+                {
+                    WorkerId = workerId,
+                    ServiceId = serviceId
+                });
+
+                await unitOfWork.WorkerServiceMapping.AddRangeAsync(newMappings);
+            }
+
+            // 4️⃣ Kaydet
+            await unitOfWork.SaveChangesAsync();
+            logger.LogInformation("Updated services for worker {WorkerId}", workerId);
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to update services for worker {WorkerId}", workerId);
+            return false;
+        }
+    }
+
+
+    /// Tüm hizmetleri listeler (çalışan seçmeden önce)
+    /// </summary>
+    public async Task<List<WorkerServiceViewModel>> GetAllServicesAsync()
+    {
+        var services = await unitOfWork.WorkerService.GetAllAsync();
+
+        return services
+            .OrderBy(s => s.ServiceName)
+            .Select(s => new WorkerServiceViewModel
+            {
+                Id = s.Id,
+                ServiceName = s.ServiceName,
+                DurationMinutes = s.DurationMinutes,
+                Price = s.Price
+            })
+            .ToList();
+    }
+
+    public async Task<List<WorkerServiceEntity>> GetWorkerServiceEntityByIdAsync(int workerId)
+    {
+        var workerMappings = await unitOfWork.WorkerServiceMapping
+            .FindAsync(ws => ws.WorkerId == workerId);
+
+        if (workerMappings == null || !workerMappings.Any())
+            return new List<WorkerServiceEntity>();
+
+        var serviceIds = workerMappings.Select(m => m.ServiceId).ToList();
+
+        var services = await unitOfWork.WorkerService
+            .FindAsync(s => serviceIds.Contains(s.Id));
+
+        return services.ToList();
+    }
 
     public async Task<IEnumerable<Worker>> GetActiveWorkersAsync()
     {
@@ -52,23 +149,41 @@ public class WorkerService(IUnitOfWork unitOfWork, ILogger<WorkerService> logger
         return await unitOfWork.Workers.GetWorkerWithSchedulesAsync(id);
     }
 
-    public async Task<Worker> CreateWorkerAsync(Worker worker, IEnumerable<WorkerSchedule> schedules)
+   
+
+    public async Task<Worker> CreateWorkerAsync(
+        Worker worker,
+        IEnumerable<WorkerSchedule> schedules,
+        IEnumerable<int> selectedServiceIds) // formdan gelen seçili hizmetler
     {
         try
         {
+            // 1️⃣ Çalışanı ekle
             worker.CreatedAt = DateTime.UtcNow;
             await unitOfWork.Workers.AddAsync(worker);
             await unitOfWork.SaveChangesAsync();
 
+            // 2️⃣ Çalışma saatlerini ekle
             foreach (var schedule in schedules)
             {
                 schedule.WorkerId = worker.Id;
                 await unitOfWork.WorkerSchedules.AddAsync(schedule);
             }
 
+            // 3️⃣ Seçilen hizmetleri mapping tablosuna ekle
+            if (selectedServiceIds != null && selectedServiceIds.Any())
+            {
+                var workerServices = selectedServiceIds.Select(serviceId => new WorkerServiceMapping
+                {
+                     WorkerId= worker.Id,
+                    ServiceId = serviceId
+                }).ToList();
+
+                await unitOfWork.WorkerServiceMapping.AddRangeAsync(workerServices);
+            }
             await unitOfWork.SaveChangesAsync();
+
             logger.LogInformation("Created worker: {WorkerId} - {WorkerName}", worker.Id, worker.Name);
-                
             return worker;
         }
         catch (Exception ex)
@@ -77,7 +192,6 @@ public class WorkerService(IUnitOfWork unitOfWork, ILogger<WorkerService> logger
             throw;
         }
     }
-
     public async Task<bool> UpdateWorkerAsync(int id, Worker worker, IEnumerable<WorkerSchedule> schedules)
     {
         try

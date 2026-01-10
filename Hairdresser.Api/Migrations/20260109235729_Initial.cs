@@ -44,6 +44,21 @@ namespace Hairdresser.Api.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "worker_services",
+                columns: table => new
+                {
+                    id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    service_name = table.Column<string>(type: "text", nullable: false),
+                    duration_minutes = table.Column<int>(type: "integer", nullable: false),
+                    price = table.Column<decimal>(type: "numeric", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_worker_services", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "workers",
                 columns: table => new
                 {
@@ -74,7 +89,8 @@ namespace Hairdresser.Api.Migrations
                     service_type = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
                     notes = table.Column<string>(type: "text", nullable: true),
                     created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()"),
-                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()")
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()"),
+                    ServiceId = table.Column<int>(type: "integer", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -85,6 +101,11 @@ namespace Hairdresser.Api.Migrations
                         principalTable: "users",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_appointments_worker_services_ServiceId",
+                        column: x => x.ServiceId,
+                        principalTable: "worker_services",
+                        principalColumn: "id");
                     table.ForeignKey(
                         name: "FK_appointments_workers_worker_id",
                         column: x => x.worker_id,
@@ -116,6 +137,35 @@ namespace Hairdresser.Api.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            migrationBuilder.CreateTable(
+                name: "worker_service_mapping",
+                columns: table => new
+                {
+                    worker_id = table.Column<int>(type: "integer", nullable: false),
+                    service_id = table.Column<int>(type: "integer", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_worker_service_mapping", x => new { x.worker_id, x.service_id });
+                    table.ForeignKey(
+                        name: "FK_worker_service_mapping_worker_services_service_id",
+                        column: x => x.service_id,
+                        principalTable: "worker_services",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_worker_service_mapping_workers_worker_id",
+                        column: x => x.worker_id,
+                        principalTable: "workers",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_appointments_ServiceId",
+                table: "appointments",
+                column: "ServiceId");
+
             migrationBuilder.CreateIndex(
                 name: "IX_appointments_user_id",
                 table: "appointments",
@@ -146,6 +196,11 @@ namespace Hairdresser.Api.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_worker_service_mapping_service_id",
+                table: "worker_service_mapping",
+                column: "service_id");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_workers_name",
                 table: "workers",
                 column: "name");
@@ -164,7 +219,13 @@ namespace Hairdresser.Api.Migrations
                 name: "worker_schedules");
 
             migrationBuilder.DropTable(
+                name: "worker_service_mapping");
+
+            migrationBuilder.DropTable(
                 name: "users");
+
+            migrationBuilder.DropTable(
+                name: "worker_services");
 
             migrationBuilder.DropTable(
                 name: "workers");

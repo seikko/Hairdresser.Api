@@ -1,6 +1,6 @@
 @model Hairdresser.Api.Models.ViewModels.WorkerViewModel
 @{
-    ViewData["Title"] = "Çalışan Düzenle";
+ViewData["Title"] = "Çalışan Düzenle";
 }
 
 <div class="row">
@@ -15,7 +15,8 @@
                 <form asp-action="Edit" method="post">
                     <input type="hidden" asp-for="Id" />
                     <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
-                    
+
+                    <!-- Çalışan Bilgileri -->
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <label asp-for="Name" class="form-label"></label>
@@ -38,52 +39,77 @@
 
                     <hr />
 
+                    <!-- Çoklu Hizmet Seçimi Checkbox -->
+                    <div class="mb-3">
+                        <label class="form-label"><i class="bi bi-scissors"></i> Hizmetler</label>
+                        <div class="row">
+                            @foreach (var service in Model.AvailableServices)
+                            {
+                            var isChecked = Model.SelectedServiceIds != null && Model.SelectedServiceIds.Contains(service.Id);
+                            <div class="col-md-6 mb-2">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox"
+                                           name="SelectedServiceIds"
+                                           value="@service.Id"
+                                           @(isChecked ? "checked" : "")
+                                           id="service_@service.Id" />
+                                    <label class="form-check-label" for="service_@service.Id">
+                                        @service.ServiceName (@service.DurationMinutes dk - @service.Price ₺)
+                                    </label>
+                                </div>
+                            </div>
+                            }
+                        </div>
+                    </div>
+
+                    <hr />
+
+                    <!-- Çalışma Saatleri -->
                     <h5 class="mb-3">
                         <i class="bi bi-clock"></i> Çalışma Saatleri
                     </h5>
-
                     <div class="table-responsive">
                         <table class="table table-sm">
                             <thead class="table-light">
-                                <tr>
-                                    <th width="30%">Gün</th>
-                                    <th width="15%">Çalışıyor</th>
-                                    <th width="25%">Başlangıç</th>
-                                    <th width="25%">Bitiş</th>
-                                </tr>
+                            <tr>
+                                <th width="30%">Gün</th>
+                                <th width="15%">Çalışıyor</th>
+                                <th width="25%">Başlangıç</th>
+                                <th width="25%">Bitiş</th>
+                            </tr>
                             </thead>
                             <tbody>
-                                @for (int i = 0; i < Model.Schedules.Count; i++)
-                                {
-                                    <tr>
-                                        <td>
-                                            <input type="hidden" name="Schedules[@i].Id" value="@Model.Schedules[i].Id" />
-                                            <input type="hidden" name="Schedules[@i].DayOfWeek" value="@Model.Schedules[i].DayOfWeek" />
-                                            <input type="hidden" name="Schedules[@i].DayName" value="@Model.Schedules[i].DayName" />
-                                            <strong>@Model.Schedules[i].DayName</strong>
-                                        </td>
-                                        <td>
-                                            <div class="form-check">
-                                                <input type="checkbox" name="Schedules[@i].IsWorking" value="true" 
-                                                       class="form-check-input schedule-checkbox"
-                                                       data-row="@i"
-                                                       @(Model.Schedules[i].IsWorking ? "checked" : "") />
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <input type="time" name="Schedules[@i].StartTime" 
-                                                   value="@Model.Schedules[i].StartTime.ToString("HH:mm")"
-                                                   class="form-control form-control-sm time-input-@i"
-                                                   @(Model.Schedules[i].IsWorking ? "" : "disabled") />
-                                        </td>
-                                        <td>
-                                            <input type="time" name="Schedules[@i].EndTime" 
-                                                   value="@Model.Schedules[i].EndTime.ToString("HH:mm")"
-                                                   class="form-control form-control-sm time-input-@i"
-                                                   @(Model.Schedules[i].IsWorking ? "" : "disabled") />
-                                        </td>
-                                    </tr>
-                                }
+                            @for (int i = 0; i < Model.Schedules.Count; i++)
+                            {
+                            <tr>
+                                <td>
+                                    <input type="hidden" name="Schedules[@i].Id" value="@Model.Schedules[i].Id" />
+                                    <input type="hidden" name="Schedules[@i].DayOfWeek" value="@Model.Schedules[i].DayOfWeek" />
+                                    <input type="hidden" name="Schedules[@i].DayName" value="@Model.Schedules[i].DayName" />
+                                    <strong>@Model.Schedules[i].DayName</strong>
+                                </td>
+                                <td>
+                                    <div class="form-check">
+                                        <input type="checkbox" name="Schedules[@i].IsWorking" value="true"
+                                               class="form-check-input schedule-checkbox"
+                                               data-row="@i"
+                                               @(Model.Schedules[i].IsWorking ? "checked" : "") />
+                                    </div>
+                                </td>
+                                <td>
+                                    <input type="time" name="Schedules[@i].StartTime"
+                                           value="@Model.Schedules[i].StartTime.ToString("HH:mm")"
+                                           class="form-control form-control-sm time-input-@i"
+                                           @(Model.Schedules[i].IsWorking ? "" : "disabled") />
+                                </td>
+                                <td>
+                                    <input type="time" name="Schedules[@i].EndTime"
+                                           value="@Model.Schedules[i].EndTime.ToString("HH:mm")"
+                                           class="form-control form-control-sm time-input-@i"
+                                           @(Model.Schedules[i].IsWorking ? "" : "disabled") />
+                                </td>
+                            </tr>
+                            }
                             </tbody>
                         </table>
                     </div>
@@ -103,17 +129,17 @@
 </div>
 
 @section Scripts {
-    <partial name="_ValidationScriptsPartial" />
-    <script>
-        document.querySelectorAll('.schedule-checkbox').forEach(function(checkbox) {
-            checkbox.addEventListener('change', function() {
-                var row = this.dataset.row;
-                var inputs = document.querySelectorAll('.time-input-' + row);
-                inputs.forEach(function(input) {
-                    input.disabled = !checkbox.checked;
-                });
+<partial name="_ValidationScriptsPartial" />
+<script>
+    // Çalışma saatleri checkbox toggle
+    document.querySelectorAll('.schedule-checkbox').forEach(function(checkbox) {
+        checkbox.addEventListener('change', function() {
+            var row = this.dataset.row;
+            var inputs = document.querySelectorAll('.time-input-' + row);
+            inputs.forEach(function(input) {
+                input.disabled = !checkbox.checked;
             });
         });
-    </script>
+    });
+</script>
 }
-
