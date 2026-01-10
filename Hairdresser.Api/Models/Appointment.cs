@@ -51,5 +51,6 @@ public class Appointment
     [ForeignKey("WorkerId")]
     public Worker? Worker { get; set; }
     [ForeignKey("ServiceId")]
+    public int? ServiceId { get; set; }
     public WorkerServiceEntity? Service { get; set; }
 }

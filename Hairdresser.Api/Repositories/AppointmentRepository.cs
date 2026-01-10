@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using Hairdresser.Api.Data;
 using Hairdresser.Api.Models;
 using Microsoft.EntityFrameworkCore;
@@ -66,5 +67,21 @@ public class AppointmentRepository(ApplicationDbContext context)
             .Include(a => a.User)
             .Include(a => a.Worker)
             .FirstOrDefaultAsync(a => a.Id == id);
+    }
+
+    public async Task<List<Appointment>> GetAppointmentsForReportAsync(int workerId, DateOnly startDate, DateOnly endDate)
+    {
+        return await _context.Appointments
+            .Where(a =>
+                a.WorkerId == workerId &&
+                a.AppointmentDate >= startDate &&
+                a.AppointmentDate <= endDate
+            )
+            .Include(a => a.Worker)
+            .Include(a => a.User)
+            .Include(a => a.Service)
+            .OrderBy(a => a.AppointmentDate)
+            .ThenBy(a => a.AppointmentTime)
+            .ToListAsync();
     }
 }

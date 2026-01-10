@@ -58,31 +58,52 @@ public class DashboardService(IUnitOfWork unitOfWork, ILogger<DashboardService> 
         };
     }
 
-    public async Task<IEnumerable<AppointmentViewModel>> GetDayAppointmentsAsync(DateOnly date, int? workerId)
+    public async Task<IEnumerable<AppointmentViewModel>> GetDayAppointmentsAsync(
+        DateOnly date,
+        int? workerId)
     {
-        var appointments = await unitOfWork.Appointments.GetByDateRangeAsync(date, date);
+        var appointments = await unitOfWork.Appointments
+            .GetByDateRangeAsync(date, date);
 
         var filtered = workerId.HasValue && workerId.Value > 0
-            ? appointments.Where(a => a.WorkerId == workerId.Value)
-            : appointments;
+            ? appointments.Where(a => a.WorkerId == workerId.Value).ToList()
+            : appointments.ToList();
+
+        // 👉 ServiceId'leri al
+        var serviceIds = filtered
+            .Where(a => a.ServiceId != null)
+            .Select(a => a.ServiceId!.Value)
+            .Distinct()
+            .ToList();
+
+        // 👉 İlgili servisleri tek seferde çek
+        var services = await unitOfWork.WorkerService
+            .FindAsync(ws => serviceIds.Contains(ws.Id));
 
         return filtered
             .OrderBy(a => a.AppointmentTime)
-            .Select(a => new AppointmentViewModel
+            .Select(a =>
             {
-                Id = a.Id,
-                Time = a.AppointmentTime.ToString("HH:mm"),
-                CustomerName = a.User?.Name ?? "Misafir",
-                PhoneNumber = a.User?.PhoneNumber ?? "",
-                Status = a.Status,
-                ServiceType = a.ServiceType,
-                Notes = a.Notes,
-                DurationMinutes = a.DurationMinutes,
-                WorkerId = a.WorkerId,
-                WorkerName = a.Worker?.Name ?? "Atanmamış"
+                var service = services.FirstOrDefault(s => s.Id == a.ServiceId);
+
+                return new AppointmentViewModel
+                {
+                    Id = a.Id,
+                    Time = a.AppointmentTime.ToString("HH:mm"),
+                    CustomerName = a.User?.Name ?? "Misafir",
+                    PhoneNumber = a.User?.PhoneNumber ?? "",
+                    Status = a.Status,
+                    ServiceType = service?.ServiceName,
+                    Notes = a.Notes,
+                    DurationMinutes = a.DurationMinutes,
+                    WorkerId = a.WorkerId,
+                    WorkerName = a.Worker?.Name ?? "Atanmamış",
+                    Price = service?.Price??0
+                };
             })
             .ToList();
     }
+
 
     public async Task<bool> UpdateAppointmentStatusAsync(int appointmentId, string status)
     {

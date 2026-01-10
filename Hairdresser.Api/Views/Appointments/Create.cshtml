@@ -1,63 +1,62 @@
 @model Hairdresser.Api.Models.ViewModels.AppointmentCreateViewModel
 @using Hairdresser.Api.Models
+
 @{
     ViewData["Title"] = "Yeni Randevu";
-    var workers = ViewBag.Workers as List<Worker> ?? new List<Worker>();
+    var workers = ViewBag.Workers as List<Worker> ?? new();
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="mb-0"><i class="bi bi-plus-circle"></i> Yeni Randevu</h2>
-    <a class="btn btn-outline-secondary" asp-action="Index" asp-route-date="@Model.AppointmentDate" asp-route-workerId="@Model.WorkerId">
-        <i class="bi bi-arrow-left"></i> Geri
-    </a>
+    <h2><i class="bi bi-plus-circle"></i> Yeni Randevu</h2>
 </div>
 
 <div class="card">
     <div class="card-body">
-        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
 
         <form method="post">
             @Html.AntiForgeryToken()
 
             <div class="row g-3">
+
+                <!-- TELEFON -->
                 <div class="col-md-4">
                     <label asp-for="PhoneNumber" class="form-label"></label>
-                    <input asp-for="PhoneNumber" class="form-control" placeholder="Örn: 905xxxxxxxxx" />
-                    <span asp-validation-for="PhoneNumber" class="text-danger"></span>
+                    <input asp-for="PhoneNumber" class="form-control" />
                 </div>
+
+                <!-- MÜŞTERİ -->
                 <div class="col-md-4">
                     <label asp-for="CustomerName" class="form-label"></label>
                     <input asp-for="CustomerName" class="form-control" />
-                    <span asp-validation-for="CustomerName" class="text-danger"></span>
-                    <div class="form-text">Telefon mevcutsa kullanıcı bulunur; isim boşsa otomatik doldurulmaz.</div>
                 </div>
+
+                <!-- ÇALIŞAN -->
                 <div class="col-md-4">
                     <label asp-for="WorkerId" class="form-label"></label>
-                    <select asp-for="WorkerId" class="form-select">
-                        <option value="0">Çalışan seçiniz</option>
+                    <select asp-for="WorkerId"
+                            class="form-select"
+                            id="workerSelect">
+                        <option value="">Çalışan seçiniz</option>
                         @foreach (var w in workers)
                         {
                             <option value="@w.Id">@w.Name</option>
                         }
                     </select>
-                    <span asp-validation-for="WorkerId" class="text-danger"></span>
                 </div>
 
+                <!-- TARİH -->
                 <div class="col-md-3">
                     <label asp-for="AppointmentDate" class="form-label"></label>
                     <input asp-for="AppointmentDate" type="date" class="form-control" />
-                    <span asp-validation-for="AppointmentDate" class="text-danger"></span>
                 </div>
+
+                <!-- SAAT -->
                 <div class="col-md-3">
                     <label asp-for="AppointmentTime" class="form-label"></label>
                     <input asp-for="AppointmentTime" type="time" class="form-control" />
-                    <span asp-validation-for="AppointmentTime" class="text-danger"></span>
                 </div>
-                <div class="col-md-3">
-                    <label asp-for="DurationMinutes" class="form-label"></label>
-                    <input asp-for="DurationMinutes" type="number" min="5" max="600" step="5" class="form-control" />
-                    <span asp-validation-for="DurationMinutes" class="text-danger"></span>
-                </div>
+
+                <!-- DURUM -->
                 <div class="col-md-3">
                     <label asp-for="Status" class="form-label"></label>
                     <select asp-for="Status" class="form-select">
@@ -66,35 +65,107 @@
                         <option value="completed">Tamamlandı</option>
                         <option value="cancelled">İptal</option>
                     </select>
-                    <span asp-validation-for="Status" class="text-danger"></span>
                 </div>
 
-                <div class="col-md-6">
-                    <label asp-for="ServiceType" class="form-label"></label>
-                    <input asp-for="ServiceType" class="form-control" />
-                    <span asp-validation-for="ServiceType" class="text-danger"></span>
+                <!-- HİZMETLER -->
+                <div class="col-md-12">
+                    <label class="form-label fw-bold">
+                        <i class="bi bi-scissors"></i> Hizmetler
+                    </label>
+
+                    <div id="servicesContainer">
+                        <div class="alert alert-info">
+                            Çalışan seçiniz
+                        </div>
+                    </div>
+
+                    <span asp-validation-for="SelectedServiceId" class="text-danger"></span>
                 </div>
-                <div class="col-md-6">
+
+                <!-- NOT -->
+                <div class="col-md-12">
                     <label asp-for="Notes" class="form-label"></label>
-                    <input asp-for="Notes" class="form-control" />
-                    <span asp-validation-for="Notes" class="text-danger"></span>
+                    <textarea asp-for="Notes" class="form-control"></textarea>
                 </div>
 
-                <div class="col-12 d-flex justify-content-end gap-2 mt-2">
-                    <a class="btn btn-outline-secondary" asp-action="Index" asp-route-date="@Model.AppointmentDate" asp-route-workerId="@Model.WorkerId">
-                        İptal
-                    </a>
-                    <button type="submit" class="btn btn-primary">
+                <!-- BUTON -->
+                <div class="col-12 text-end">
+                    <button class="btn btn-primary">
                         <i class="bi bi-save"></i> Kaydet
                     </button>
                 </div>
+
             </div>
         </form>
+
     </div>
 </div>
+
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
 }
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    const workerSelect = document.getElementById("workerSelect");
+    const container = document.getElementById("servicesContainer");
+
+    workerSelect.addEventListener("change", function () {
+
+        const workerId = this.value;
+        container.innerHTML = '<div class="alert alert-info">Yükleniyor...</div>';
+
+        if (!workerId) {
+            container.innerHTML =
+                '<div class="alert alert-warning">Çalışan seçiniz</div>';
+            return;
+        }
+
+        fetch(`/Appointments/GetServicesByWorker?workerId=${workerId}`)
+            .then(r => r.json())
+            .then(data => {
+
+                if (!data || data.length === 0) {
+                    container.innerHTML =
+                        '<div class="alert alert-warning">Bu çalışana ait hizmet yok</div>';
+                    return;
+                }
+
+                let html = '<div class="list-group">';
+
+                data.forEach(s => {
+                    html += `
+                        <label class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <input class="form-check-input me-2"
+                                       type="radio"
+                                       name="SelectedServiceId"
+                                       value="${s.serviceId}" />
+
+                                <strong>${s.serviceName}</strong>
+                                <small class="text-muted">
+                                    (${s.durationMinutes} dk)
+                                </small>
+                            </div>
+
+                            <span class="badge bg-primary">
+                                ${s.price} ₺
+                            </span>
+                        </label>
+                    `;
+                });
+
+                html += '</div>';
+                container.innerHTML = html;
+            })
+            .catch(() => {
+                container.innerHTML =
+                    '<div class="alert alert-danger">Hizmetler yüklenemedi</div>';
+            });
+    });
+});
+</script>
+
 
 

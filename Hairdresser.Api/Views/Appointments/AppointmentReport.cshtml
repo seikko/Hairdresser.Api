@@ -1,0 +1,121 @@
+@model Hairdresser.Api.Models.ViewModels.AppointmentReportViewModel
+@{
+    ViewData["Title"] = "Randevu Raporu";
+}
+
+<h3 class="mb-4">
+    <i class="bi bi-bar-chart"></i> Randevu Raporu
+</h3>
+
+<form method="get" class="card mb-4">
+    <div class="card-body row g-3 align-items-end">
+
+        <div class="col-md-4">
+            <label class="form-label">Çalışan</label>
+            <select name="workerId" class="form-select">
+                <option value="">Seçiniz</option>
+                @foreach (var w in Model.Workers)
+                {
+                    <option value="@w.Id" selected="@(Model.WorkerId == w.Id)">
+                        @w.Name
+                    </option>
+                }
+            </select>
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label">Başlangıç Tarihi</label>
+            <input type="date" name="startDate" class="form-control"
+                   value="@Model.StartDate?.ToString("yyyy-MM-dd")" />
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label">Bitiş Tarihi</label>
+            <input type="date" name="endDate" class="form-control"
+                   value="@Model.EndDate?.ToString("yyyy-MM-dd")" />
+        </div>
+
+        <div class="col-md-2">
+            <button class="btn btn-primary w-100">
+                <i class="bi bi-search"></i> Sorgula
+            </button>
+        </div>
+    </div>
+</form>
+
+@if (Model.Appointments.Any())
+{
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <div class="alert alert-info">
+                <strong>Toplam Randevu:</strong> @Model.TotalAppointments
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="alert alert-success">
+                <strong>Toplam Ciro:</strong> @Model.TotalRevenue ₺
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-striped mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>#</th>
+                        <th>Tarih</th>
+                        <th>Saat</th>
+                        <th>Müşteri</th>
+                        <th>Hizmet</th>
+                        <th>Ücret</th>
+                        <th>Durum</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var a in Model.Appointments)
+                    {
+                        <tr>
+                            <td>@a.AppointmentId</td>
+                            <td>@a.Date.ToString("dd.MM.yyyy")</td>
+                            <td>@a.Time</td>
+                            <td>@a.CustomerName</td>
+                            <td>@a.ServiceName</td>
+                            <td>@a.Price ₺</td>
+                            <td>
+                                @if(a.Status == "confirmed")
+                                {
+                                    <span class="badge bg-success">
+                                        <i class="bi bi-check-circle"></i> Tamamlandı
+                                    </span>
+                                }
+                                else if(a.Status == "pending")
+                                {
+                                    <span class="badge bg-warning text-dark">Bekliyor</span>
+                                }
+                                else if(a.Status == "completed")
+                                {
+                                    <span class="badge bg-primary">Tamamlandı</span>
+                                }
+                                else if(a.Status == "cancelled")
+                                {
+                                    <span class="badge bg-danger">İptal</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">@a.Status</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+else if (Model.WorkerId.HasValue)
+{
+    <div class="alert alert-warning">
+        Seçilen kriterlere ait randevu bulunamadı.
+    </div>
+}

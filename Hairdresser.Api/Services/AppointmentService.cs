@@ -1,6 +1,7 @@
 using Hairdresser.Api.Models;
 using Hairdresser.Api.Models.ViewModels;
 using Hairdresser.Api.Repositories;
+using Microsoft.EntityFrameworkCore;
 
 namespace Hairdresser.Api.Services;
 
@@ -82,7 +83,7 @@ public class AppointmentService(IUnitOfWork unitOfWork, ILogger<AppointmentServi
 
     public async Task<Appointment> CreateAppointmentFromAdminAsync(string phoneNumber, string? customerName,
         int workerId, DateOnly date, TimeOnly time, int durationMinutes, string status, string? serviceType,
-        string? notes)
+        string? notes, int selectedServiceId)
     {
         try
         {
@@ -119,9 +120,9 @@ public class AppointmentService(IUnitOfWork unitOfWork, ILogger<AppointmentServi
                 ServiceType = string.IsNullOrWhiteSpace(serviceType) ? null : serviceType.Trim(),
                 Notes = string.IsNullOrWhiteSpace(notes) ? null : notes.Trim(),
                 CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
+                UpdatedAt = DateTime.UtcNow,
+                ServiceId = selectedServiceId
             };
-
             await unitOfWork.Appointments.AddAsync(appointment);
             await unitOfWork.SaveChangesAsync();
 
@@ -136,7 +137,7 @@ public class AppointmentService(IUnitOfWork unitOfWork, ILogger<AppointmentServi
     }
 
     public async Task<bool> UpdateAppointmentAsync(int id, int workerId, DateOnly date, TimeOnly time,
-        int durationMinutes, string status, string? serviceType, string? notes)
+        int durationMinutes, string status, string? serviceType, string? notes,int selectedServiceId)
     {
         try
         {
@@ -152,6 +153,7 @@ public class AppointmentService(IUnitOfWork unitOfWork, ILogger<AppointmentServi
             appointment.ServiceType = string.IsNullOrWhiteSpace(serviceType) ? null : serviceType.Trim();
             appointment.Notes = string.IsNullOrWhiteSpace(notes) ? null : notes.Trim();
             appointment.UpdatedAt = DateTime.UtcNow;
+            appointment.ServiceId = selectedServiceId != 0 ? selectedServiceId : (int?)null;
 
             unitOfWork.Appointments.Update(appointment);
             await unitOfWork.SaveChangesAsync();
@@ -198,6 +200,15 @@ public class AppointmentService(IUnitOfWork unitOfWork, ILogger<AppointmentServi
             (!excludeAppointmentId.HasValue || a.Id != excludeAppointmentId.Value));
 
         return conflict;
+    }
+
+    public async Task<List<Appointment>> GetAppointmentsForReportAsync(
+        int workerId,
+        DateOnly startDate,
+        DateOnly endDate)
+    {
+        var appointments = await unitOfWork.Appointments.GetAppointmentsForReportAsync(workerId, startDate, endDate);
+        return appointments.ToList();
     }
 
     private static string NormalizePhoneNumber(string phone)

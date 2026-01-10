@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using Hairdresser.Api.Models;
 
 namespace Hairdresser.Api.Repositories;
@@ -10,4 +11,9 @@ public interface IAppointmentRepository : IRepository<Appointment>
     Task<Appointment?> GetByWorkerDateAndTimeAsync(int workerId, DateOnly date, TimeOnly time);
     Task<IEnumerable<Appointment>> GetByDateRangeAsync(DateOnly startDate, DateOnly endDate);
     Task<Appointment?> GetByIdWithDetailsAsync(int id);
+
+    public   Task<List<Appointment>> GetAppointmentsForReportAsync(
+        int workerId,
+        DateOnly startDate,
+        DateOnly endDate);
 }

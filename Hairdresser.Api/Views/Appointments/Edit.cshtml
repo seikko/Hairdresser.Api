@@ -24,56 +24,115 @@
             <input type="hidden" asp-for="Id" />
 
             <div class="row g-3">
+
+                <!-- ÇALIŞAN -->
                 <div class="col-md-4">
                     <label asp-for="WorkerId" class="form-label"></label>
-                    <select asp-for="WorkerId" class="form-select">
+                    <select asp-for="WorkerId" class="form-select" id="workerSelect">
+                        <option value="">Çalışan seçiniz</option>
                         @foreach (var w in workers)
                         {
-                            <option value="@w.Id">@w.Name</option>
+                            if (w.Id == Model.WorkerId)
+                            {
+                                <option value="@w.Id" selected>@w.Name</option>
+                            }
+                            else
+                            {
+                                <option value="@w.Id">@w.Name</option>
+                            }
                         }
                     </select>
                     <span asp-validation-for="WorkerId" class="text-danger"></span>
                 </div>
 
+                <!-- TARİH -->
                 <div class="col-md-3">
                     <label asp-for="AppointmentDate" class="form-label"></label>
                     <input asp-for="AppointmentDate" type="date" class="form-control" />
                     <span asp-validation-for="AppointmentDate" class="text-danger"></span>
                 </div>
+
+                <!-- SAAT -->
                 <div class="col-md-3">
                     <label asp-for="AppointmentTime" class="form-label"></label>
                     <input asp-for="AppointmentTime" type="time" class="form-control" />
                     <span asp-validation-for="AppointmentTime" class="text-danger"></span>
                 </div>
+
+                <!-- DURATION -->
                 <div class="col-md-2">
                     <label asp-for="DurationMinutes" class="form-label"></label>
                     <input asp-for="DurationMinutes" type="number" min="5" max="600" step="5" class="form-control" />
                     <span asp-validation-for="DurationMinutes" class="text-danger"></span>
                 </div>
 
+                <!-- DURUM -->
                 <div class="col-md-3">
                     <label asp-for="Status" class="form-label"></label>
                     <select asp-for="Status" class="form-select">
-                        <option value="pending">Bekliyor</option>
-                        <option value="confirmed">Onaylandı</option>
-                        <option value="completed">Tamamlandı</option>
-                        <option value="cancelled">İptal</option>
+                        @if(Model.Status == "pending")
+                        {
+                            <option value="pending" selected>Bekliyor</option>
+                        }
+                        else
+                        {
+                            <option value="pending">Bekliyor</option>
+                        }
+
+                        @if(Model.Status == "confirmed")
+                        {
+                            <option value="confirmed" selected>Onaylandı</option>
+                        }
+                        else
+                        {
+                            <option value="confirmed">Onaylandı</option>
+                        }
+
+                        @if(Model.Status == "completed")
+                        {
+                            <option value="completed" selected>Tamamlandı</option>
+                        }
+                        else
+                        {
+                            <option value="completed">Tamamlandı</option>
+                        }
+
+                        @if(Model.Status == "cancelled")
+                        {
+                            <option value="cancelled" selected>İptal</option>
+                        }   
+                        else
+                        {
+                            <option value="cancelled">İptal</option>
+                        }
                     </select>
                     <span asp-validation-for="Status" class="text-danger"></span>
                 </div>
 
-                <div class="col-md-9">
-                    <label asp-for="ServiceType" class="form-label"></label>
-                    <input asp-for="ServiceType" class="form-control" />
-                    <span asp-validation-for="ServiceType" class="text-danger"></span>
+
+                <!-- HİZMETLER -->
+                <div class="col-md-12">
+                    <label class="form-label fw-bold">
+                        <i class="bi bi-scissors"></i> Hizmetler
+                    </label>
+
+                    <div id="servicesContainer">
+                        <div class="alert alert-info">
+                            Çalışan seçiniz
+                        </div>
+                    </div>
+
+                    <span asp-validation-for="SelectedServiceId" class="text-danger"></span>
                 </div>
 
-                <div class="col-12">
+                <!-- NOT -->
+                <div class="col-md-12">
                     <label asp-for="Notes" class="form-label"></label>
                     <textarea asp-for="Notes" class="form-control" rows="3"></textarea>
                     <span asp-validation-for="Notes" class="text-danger"></span>
                 </div>
 
+                <!-- BUTONLAR -->
                 <div class="col-12 d-flex justify-content-between align-items-center mt-2">
                     <a class="btn btn-outline-danger" asp-action="Delete" asp-route-id="@Model.Id">
                         <i class="bi bi-trash"></i> Sil
@@ -87,6 +146,7 @@
                         </button>
                     </div>
                 </div>
+
             </div>
         </form>
     </div>
@@ -94,6 +154,78 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+
+    <script>
+    document.addEventListener("DOMContentLoaded", function () {
+
+        const workerSelect = document.getElementById("workerSelect");
+        const container = document.getElementById("servicesContainer");
+
+        // Mevcut seçili hizmet varsa
+        const selectedServiceId = '@Model.SelectedServiceId';
+
+        async function loadServices(workerId) {
+
+            container.innerHTML = '<div class="alert alert-info">Yükleniyor...</div>';
+
+            if (!workerId) {
+                container.innerHTML =
+                    '<div class="alert alert-warning">Çalışan seçiniz</div>';
+                return;
+            }
+
+            try {
+                const response = await fetch(`/Appointments/GetServicesByWorker?workerId=${workerId}`);
+                const data = await response.json();
+
+                if (!data || data.length === 0) {
+                    container.innerHTML =
+                        '<div class="alert alert-warning">Bu çalışana ait hizmet yok</div>';
+                    return;
+                }
+
+                let html = '<div class="list-group">';
+
+                data.forEach(s => {
+                    const checked = s.serviceId == selectedServiceId ? 'checked' : '';
+
+                    html += `
+                        <label class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <input class="form-check-input me-2"
+                                       type="radio"
+                                       name="SelectedServiceId"
+                                       value="${s.serviceId}"
+                                       ${checked} />
+
+                                <strong>${s.serviceName}</strong>
+                                <small class="text-muted">(${s.durationMinutes} dk)</small>
+                            </div>
+
+                            <span class="badge bg-primary">${s.price} ₺</span>
+                        </label>
+                    `;
+                });
+
+                html += '</div>';
+                container.innerHTML = html;
+
+            } catch (err) {
+                container.innerHTML =
+                    '<div class="alert alert-danger">Hizmetler yüklenemedi</div>';
+                console.error(err);
+            }
+        }
+
+        // Sayfa açıldığında seçili çalışan varsa hizmetleri yükle
+        if (workerSelect.value) {
+            loadServices(workerSelect.value);
+        }
+
+        // Çalışan değiştiğinde hizmetleri tekrar yükle
+        workerSelect.addEventListener("change", function () {
+            loadServices(this.value);
+        });
+    });
+    </script>
 }
-
-

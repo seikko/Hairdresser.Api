@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace Hairdresser.Api.Models.ViewModels;
 
@@ -40,6 +41,14 @@ public class AppointmentCreateViewModel
 
     [Display(Name = "Notlar")]
     public string? Notes { get; set; }
+    
+    public int SelectedServiceId { get; set; }
+
+    // 🔥 SERVİS LİSTESİ (mapping tablosundan)
+    public List<ServiceSelectItemViewModel> Services { get; set; } = new();
+  
+
+ 
 }
 
 public class AppointmentEditViewModel
@@ -76,6 +85,10 @@ public class AppointmentEditViewModel
 
     [Display(Name = "Notlar")]
     public string? Notes { get; set; }
+    public int SelectedServiceId { get; set; }
+
+    // 🔥 SERVİS LİSTESİ (mapping tablosundan)
+    public List<ServiceSelectItemViewModel> Services { get; set; } = new();
 }
 
 public class AppointmentDeleteViewModel
@@ -113,4 +126,11 @@ public class AppointmentRowViewModel
     public string StatusBadgeClass { get; set; } = "badge bg-secondary";
     public int DurationMinutes { get; set; }
     public string? ServiceType { get; set; }
+}
+public class ServiceSelectItemViewModel
+{
+    public int ServiceId { get; set; }
+    public string ServiceName { get; set; } = default!;
+    public int DurationMinutes { get; set; }
+    public decimal Price { get; set; }
 }

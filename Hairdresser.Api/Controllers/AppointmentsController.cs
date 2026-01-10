@@ -4,6 +4,7 @@ using Hairdresser.Api.Models.ViewModels;
 using Hairdresser.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace Hairdresser.Api.Controllers;
 
@@ -11,6 +12,62 @@ namespace Hairdresser.Api.Controllers;
 public class AppointmentsController(IAppointmentService appointmentService, IWorkerService workerService)
     : Controller
 {
+
+    #region report
+
+    [HttpGet]
+    public async Task<IActionResult> AppointmentReport(
+        int? workerId,
+        DateOnly? startDate,
+        DateOnly? endDate)
+    {
+        var workers = await workerService.GetActiveWorkersAsync();
+
+        var model = new AppointmentReportViewModel
+        {
+            WorkerId = workerId,
+            StartDate = startDate,
+            EndDate = endDate,
+            Workers = workers.Select(w => new WorkerDropdownViewModel
+            {
+                Id = w.Id,
+                Name = w.Name
+            }).ToList()
+        };
+
+        if (workerId.HasValue && startDate.HasValue && endDate.HasValue)
+        {
+            var appointments = await appointmentService
+                .GetAppointmentsForReportAsync(workerId.Value, startDate.Value, endDate.Value);
+
+            model.Appointments = appointments.Select(a => new AppointmentReportItemViewModel
+            {
+                AppointmentId = a.Id,
+
+                WorkerName = a.Worker?.Name ?? "—",
+
+                CustomerName = 
+                    !string.IsNullOrWhiteSpace(a.User?.Name)
+                        ? a.User.Name
+                        : a.User?.PhoneNumber ?? "—",
+
+                ServiceName = a.Service?.ServiceName ?? "Hizmet Silinmiş",
+
+                Date = a.AppointmentDate,
+                Time = a.AppointmentTime,
+                Price = a.Service?.Price ?? 0,
+                Status = a.Status.ToString()
+            }).ToList();
+
+
+            model.TotalAppointments = model.Appointments.Count;
+            model.TotalRevenue = model.Appointments.Sum(x => x.Price);
+        }
+
+        return View(model);
+    }
+
+    #endregion
     [HttpGet]
     public async Task<IActionResult> Index(string? date, int? workerId, string? status, string? search)
     {
@@ -32,11 +89,32 @@ public class AppointmentsController(IAppointmentService appointmentService, IWor
         {
             AppointmentDate = selectedDate.ToString("yyyy-MM-dd"),
             AppointmentTime = selectedTime.ToString("HH:mm"),
-            WorkerId = workerId.GetValueOrDefault() > 0 ? workerId!.Value : 0
+            WorkerId = workerId.GetValueOrDefault(),
         };
 
         return View(vm);
     }
+    
+    [HttpGet]
+    public async Task<IActionResult> GetServicesByWorker(int workerId)
+    {
+        if (workerId <= 0)
+            return Json(new List<ServiceSelectItemViewModel>());
+
+        var workerServices =
+            await workerService.GetWorkerServiceEntityByIdAsync(workerId);
+
+        var result = workerServices.Select(ws => new ServiceSelectItemViewModel
+        {
+            ServiceId = ws.Id,
+            ServiceName = ws.ServiceName,
+            DurationMinutes = ws.DurationMinutes,
+            Price = ws.Price
+        }).ToList();
+
+        return Json(result);
+    }
+
 
     [HttpPost]
     [ValidateAntiForgeryToken]
@@ -92,7 +170,7 @@ public class AppointmentsController(IAppointmentService appointmentService, IWor
             model.DurationMinutes,
             model.Status,
             model.ServiceType,
-            model.Notes
+            model.Notes,model.SelectedServiceId
         );
 
         return RedirectToAction(nameof(Index),
@@ -161,7 +239,8 @@ public class AppointmentsController(IAppointmentService appointmentService, IWor
             model.DurationMinutes,
             model.Status,
             model.ServiceType,
-            model.Notes
+            model.Notes,
+            model.SelectedServiceId
         );
 
         if (!success)

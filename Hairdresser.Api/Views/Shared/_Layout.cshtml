@@ -22,6 +22,12 @@
                     </button>
                     <div class="collapse navbar-collapse" id="navbarNav">
                         <ul class="navbar-nav ms-auto">
+                            
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Appointments" asp-action="AppointmentReport">
+                                    <i class="bi bi-calendar-check"></i> Raporlama
+                                </a>
+                            </li>
                             <li class="nav-item">
                                 <a class="nav-link" asp-controller="Dashboard" asp-action="Index">
                                     <i class="bi bi-calendar-check"></i> Randevular
@@ -93,7 +99,7 @@
             modalPhone    = document.getElementById("custPhone");
             modalService  = document.getElementById("custService");
             modalTime     = document.getElementById("custTime");
-
+            modalPrice     = document.getElementById("custPrice");
             editLink   = document.getElementById("detailLink");
             cancelLink = document.getElementById("cancelLink");
 
@@ -101,7 +107,7 @@
         }
 
         // GLOBAL FUNK: MODAL GÖSTERME
-        window.showAppointmentModal = function(customer, phone, service, time, id) {
+        window.showAppointmentModal = function(customer, phone, service, price, time, id) {
             if (!appointmentModal && !initModal()) {
                 console.error("Modal hazır değil!");
                 return;
@@ -110,6 +116,7 @@
             modalCustomer.textContent = customer || "-";
             modalPhone.textContent    = phone || "-";
             modalService.textContent  = service || "-";
+            modalPrice.textContent    = price ? price + " ₺" : "-";
             modalTime.textContent     = time || "-";
 
             editLink.href   = `/Appointments/Edit/${id}`;

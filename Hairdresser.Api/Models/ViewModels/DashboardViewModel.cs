@@ -28,6 +28,7 @@ public class AppointmentViewModel
     public string? ServiceType { get; set; }
     public string? Notes { get; set; }
     public int DurationMinutes { get; set; }
+    public decimal Price { get; set; }
 
     public int WorkerId { get; set; }
     public string WorkerName { get; set; } = string.Empty;
