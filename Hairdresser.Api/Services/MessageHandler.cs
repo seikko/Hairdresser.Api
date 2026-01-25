@@ -366,13 +366,17 @@ Sorularınız veya destek talepleriniz için bizimle iletişime geçebilirsiniz.
 
     private async Task HandleDateSelectionAsync(string from, string replyId, ConversationState state, int userId)
 {
-    var dateString = replyId.Replace("date_", "");
-    if (!DateOnly.TryParseExact(dateString, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var selectedDate))
+    var dateString = replyId.Replace("date_", "").Trim();
+
+    if (!DateOnly.TryParseExact(dateString, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var selectedDate)
+        && !DateOnly.TryParse(dateString, out selectedDate))
     {
-        Console.WriteLine($"{dateString} tarhi ....");
+        Console.WriteLine($"❌ Geçersiz tarih: '{dateString}'");
         await whatsAppService.SendTextMessageAsync(from, "❌ Geçersiz tarih. Lütfen tekrar deneyin.");
         return;
     }
+        Console.WriteLine($"{dateString} tarhi ....");
+    
     if (!state.SelectedWorkerId.HasValue)
     {
         await whatsAppService.SendTextMessageAsync(from, "❌ Lütfen önce bir çalışan seçin. /randevu");
