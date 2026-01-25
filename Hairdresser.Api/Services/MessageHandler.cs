@@ -184,6 +184,7 @@ Sorularınız veya destek talepleriniz için bizimle iletişime geçebilirsiniz.
     string replyId,
     ConversationState state)
 {
+    // 1️⃣ ServiceId'yi parse et
     var serviceIdStr = replyId.Replace("service_", "");
     if (!int.TryParse(serviceIdStr, out var serviceId))
     {
@@ -193,40 +194,25 @@ Sorularınız veya destek talepleriniz için bizimle iletişime geçebilirsiniz.
         return;
     }
 
-    // 1️⃣ State güncelle
+    // 2️⃣ State güncelle
     state.SelectedServiceId = serviceId;
     Console.WriteLine($"{serviceId} selected service id ");
-    Console.WriteLine($"{serviceId.GetType()} selected service id  type");
+    Console.WriteLine($"{serviceId.GetType()} selected service id type");
     state.CurrentStep = ConversationStep.AwaitingWorker;
     await conversationService.UpdateStateAsync(state);
-    // 2️⃣ Hizmet → Worker mapping
-        var mappings = await workerServiceMappingRepository.GetAllAsync();
-        var mappingList = mappings
-            .Where(y => y.ServiceId == state.SelectedServiceId)
-            .ToList();
 
-        Console.WriteLine($"{mappingList.Count} mappings ");
-        if (mappingList.Count == 0)
-        {
-            Console.WriteLine($"{mappingList.Count} buraya girdi kod  ");
-            await whatsAppService.SendTextMessageAsync(
-                from,
-                "❌ Bu hizmet için tanımlı çalışan bulunmamaktadır.");
-            await conversationService.ClearStateAsync(from);
-            return;
-        }
-
-    // 3️⃣ WorkerId’leri çıkar
-    var workerIds = mappingList
-        .Select(x => x.WorkerId)
-        .Distinct()
+    // 3️⃣ Mapping tablosundan seçilen hizmete ait kayıtları çek
+    var mappings = await workerServiceMappingRepository.GetAllAsync();
+    var mappingList = mappings
+        .Where(y => y.ServiceId == state.SelectedServiceId)
         .ToList();
 
-    // 4️⃣ 🔴 ID’YE GÖRE GERÇEK ÇALIŞANLARI ÇEK
-    var workers = await workerService.GetWorkerServiceIdsAsync(workerIds);
+    Console.WriteLine($"{mappingList.Count} mappings ");
 
-    if (!workers.Any())
+    if (mappingList.Count == 0)
     {
+        Console.WriteLine("ilk if");
+        
         await whatsAppService.SendTextMessageAsync(
             from,
             "❌ Bu hizmet için tanımlı çalışan bulunmamaktadır.");
@@ -234,7 +220,26 @@ Sorularınız veya destek talepleriniz için bizimle iletişime geçebilirsiniz.
         return;
     }
 
-    // 5️⃣ WhatsApp 24 karakter helper
+    // 4️⃣ WorkerId'leri mappingList'ten al (ServiceId değil!)
+    var workerIds = mappingList
+        .Select(x => x.WorkerId)
+        .Distinct()
+        .ToList();
+
+    // 5️⃣ Worker tablosundan gerçek çalışanları çek
+    var workers = await workerService.GetWorkerServiceIdsAsync(workerIds);
+
+    if (!workers.Any())
+    {
+        Console.WriteLine("ikinci if");
+        await whatsAppService.SendTextMessageAsync(
+            from,
+            "❌ Bu hizmet için tanımlı çalışan bulunmamaktadır.");
+        await conversationService.ClearStateAsync(from);
+        return;
+    }
+
+    // 6️⃣ WhatsApp 24 karakter helper
     string Short(string text, int max = 24)
         => string.IsNullOrWhiteSpace(text)
             ? string.Empty
@@ -242,16 +247,15 @@ Sorularınız veya destek talepleriniz için bizimle iletişime geçebilirsiniz.
                 ? text
                 : text[..(max - 1)] + "…";
 
-    // 6️⃣ Interactive list – ÇALIŞAN SEÇME
+    // 7️⃣ Interactive list için worker satırlarını hazırla
     var workerRows = workers
         .Select(w => (
             id: $"worker_{w.Id}",
-            title: Short(w.Name, 24),          // ✅ Çalışan adı
+            title: Short(w.Name, 24),
             description: "Uygun randevuları gör"
         ))
         .ToList();
 
-    // 7️⃣ WhatsApp list gönder
     await whatsAppService.SendInteractiveListAsync(
         from,
         "💇 *Seçtiğiniz hizmet için uygun çalışanlar:*",
@@ -259,6 +263,7 @@ Sorularınız veya destek talepleriniz için bizimle iletişime geçebilirsiniz.
         workerRows
     );
 }
+
 
 
     private async Task StartBookingFlowAsync(string from)
