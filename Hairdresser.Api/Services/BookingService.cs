@@ -159,7 +159,7 @@ public class BookingService(IUnitOfWork unitOfWork, ILogger<BookingService> logg
                 AppointmentDate = date,
                 AppointmentTime = time,
                 ServiceType = serviceType,
-                Status = "pending",
+                Status = "confirmed",
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
                 ServiceId = serviceId
