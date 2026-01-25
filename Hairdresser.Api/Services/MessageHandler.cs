@@ -105,7 +105,10 @@ public class MessageHandler(
             await SendWelcomeMessageAsync(from);
             return;
         }
-
+        if (replyId.StartsWith("service_"))
+        {
+            await HandleServiceSelectionAsync(from, replyId, state);
+        }
         if (replyId.StartsWith("worker_"))
         {
             await HandleWorkerSelectionAsync(from, replyId, state);
@@ -173,39 +176,94 @@ Sorularınız veya destek talepleriniz için bizimle iletişime geçebilirsiniz.
         await whatsAppService.SendTextMessageAsync(from, message);
     }
 
-    private async Task StartBookingFlowAsync(string from)
+    
+    private async Task HandleServiceSelectionAsync(
+        string from,
+        string replyId,
+        ConversationState state)
     {
-        var workers = await bookingService.GetActiveWorkersAsync();
-
-        if (workers.Count == 0)
+        var serviceIdStr = replyId.Replace("service_", "");
+        if (!int.TryParse(serviceIdStr, out var serviceId))
         {
-            await whatsAppService.SendTextMessageAsync(from,
-                "❌ Şu anda müsait çalışan bulunmamaktadır. Lütfen daha sonra tekrar deneyin.");
+            await whatsAppService.SendTextMessageAsync(from, "❌ Geçersiz hizmet seçimi.");
             return;
         }
 
-        var workerList = workers.Select(w => (
-            $"worker_{w.Id}",
-            w.Name,
-            w.Specialty ?? "Kuaför"
+        state.SelectedServiceId = serviceId;
+        state.CurrentStep = ConversationStep.AwaitingWorker;
+        await conversationService.UpdateStateAsync(state);
+
+        var mappings = await workerServiceMappingRepository
+            .FindAsync(x => x.ServiceId == serviceId);
+
+        var workers = mappings
+            .Where(x => x.Worker != null)
+            .Select(x => x.Worker!)
+            .GroupBy(w => w.Id)
+            .Select(g => g.First())
+            .ToList();
+
+        if (!workers.Any())
+        {
+            await whatsAppService.SendTextMessageAsync(
+                from,
+                "❌ Bu hizmet için tanımlı çalışan bulunmamaktadır.");
+            await conversationService.ClearStateAsync(from);
+            return;
+        }
+
+        var workerRows = workers.Select(w => (
+            id: $"worker_{w.Id}",
+            title: w.Name,
+            description: w.Specialty ?? "Kuaför"
+        )).ToList();
+
+        await whatsAppService.SendInteractiveListAsync(
+            from,
+            "💇 Lütfen çalışan seçin:",
+            "Çalışan Seç",
+            workerRows
+        );
+    }
+    private async Task StartBookingFlowAsync(string from)
+    {
+        var mappings = await workerServiceMappingRepository.GetAllAsync();
+
+        var services = mappings
+            .Where(x => x.Service != null)
+            .Select(x => x.Service!)
+            .GroupBy(s => s.Id)
+            .Select(g => g.First())
+            .ToList();
+
+        if (!services.Any())
+        {
+            await whatsAppService.SendTextMessageAsync(from,
+                "❌ Şu anda müsait hizmet bulunmamaktadır.");
+            return;
+        }
+
+        var rows = services.Select(s => (
+            id: $"service_{s.Id}",
+            title: s.ServiceName,
+            description: s.DurationMinutes != null ? $"{s.DurationMinutes} dk" : null
         )).ToList();
 
         var state = new ConversationState
         {
             PhoneNumber = from,
-            CurrentStep = ConversationStep.AwaitingWorker
+            CurrentStep = ConversationStep.AwaitingService
         };
 
         await conversationService.UpdateStateAsync(state);
 
         await whatsAppService.SendInteractiveListAsync(
             from,
-            "💇 Lütfen randevu almak istediğiniz çalışanı seçin:",
-            "Çalışan Seç",
-            workerList!
+            "✨ Lütfen almak istediğiniz hizmeti seçin:",
+            "Hizmet Seç",
+            rows
         );
     }
-
     private async Task HandleWorkerSelectionAsync(
         string from,
         string replyId,
