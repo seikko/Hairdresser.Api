@@ -196,13 +196,15 @@ Sorularınız veya destek talepleriniz için bizimle iletişime geçebilirsiniz.
     // 1️⃣ State güncelle
     state.SelectedServiceId = serviceId;
     Console.WriteLine($"{serviceId} selected service id ");
+    Console.WriteLine($"{serviceId.GetType()} selected service id  type");
     state.CurrentStep = ConversationStep.AwaitingWorker;
     await conversationService.UpdateStateAsync(state);
     // 2️⃣ Hizmet → Worker mapping
     var mappings = await workerServiceMappingRepository
         .FindAsync(x => x.ServiceId == serviceId);
-
-    if (!mappings.Any())
+    var mappingList = mappings.ToList();
+    Console.WriteLine($"{mappingList.Count} mappings ");
+    if (mappingList.Count() == 0)
     {
         await whatsAppService.SendTextMessageAsync(
             from,
@@ -212,7 +214,7 @@ Sorularınız veya destek talepleriniz için bizimle iletişime geçebilirsiniz.
     }
 
     // 3️⃣ WorkerId’leri çıkar
-    var workerIds = mappings
+    var workerIds = mappingList
         .Select(x => x.WorkerId)
         .Distinct()
         .ToList();
