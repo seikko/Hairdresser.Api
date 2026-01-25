@@ -328,8 +328,8 @@ Sorularınız veya destek talepleriniz için bizimle iletişime geçebilirsiniz.
         await conversationService.UpdateStateAsync(state);
 
         // 🔽 Çalışana ait hizmetleri getir
-        var services = await workerServiceMappingRepository.FindAsync(x=> x.ServiceId == workerId);
-
+        var services = await workerServiceMappingRepository.FindAsync(x=> x.WorkerId == workerId);
+        Console.WriteLine($"{services.Count()} services sayısı");
         if (!services.Any())
         {
             await whatsAppService.SendTextMessageAsync(
