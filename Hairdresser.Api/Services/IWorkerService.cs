@@ -25,6 +25,7 @@ public interface IWorkerService
     Task<List<WorkerServiceViewModel>> GetAllServicesAsync();
     Task<List<WorkerServiceEntity>> GetWorkerServiceEntityByIdAsync(int workerId);
     Task<List<WorkerServiceEntity>> GetWorkerServiceEntitiesAsync(List<int> workerId);
+    Task<List<Worker>> GetWorkerServiceIdsAsync(List<int> workerIds);
     Task<WorkerServiceEntity> GetWorkerServiceByIdAsync(int serviceId);
     Task<WorkerServiceEntity> UpdateWorkerServiceEntityAsync(WorkerServiceEntity entity);
     Task<bool> DeleteWorkerServiceEntityAsync(int id);

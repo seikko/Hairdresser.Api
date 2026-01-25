@@ -179,7 +179,7 @@ Sorularınız veya destek talepleriniz için bizimle iletişime geçebilirsiniz.
     }
 
     
-    private async Task HandleServiceSelectionAsync(
+   private async Task HandleServiceSelectionAsync(
     string from,
     string replyId,
     ConversationState state)
@@ -198,10 +198,10 @@ Sorularınız veya destek talepleriniz için bizimle iletişime geçebilirsiniz.
     state.CurrentStep = ConversationStep.AwaitingWorker;
     await conversationService.UpdateStateAsync(state);
 
-    // 2️⃣ Hizmete ait mapping'leri al
+    // 2️⃣ Hizmet → Worker mapping
     var mappings = await workerServiceMappingRepository
         .FindAsync(x => x.ServiceId == serviceId);
-    
+
     if (!mappings.Any())
     {
         await whatsAppService.SendTextMessageAsync(
@@ -211,15 +211,14 @@ Sorularınız veya destek talepleriniz için bizimle iletişime geçebilirsiniz.
         return;
     }
 
-    // 3️⃣ WorkerId'leri çıkar
+    // 3️⃣ WorkerId’leri çıkar
     var workerIds = mappings
         .Select(x => x.WorkerId)
         .Distinct()
         .ToList();
 
-    // 4️⃣ Worker tablosundan çalışanları çek
-    var workers = await workerService.GetWorkerServiceEntitiesAsync(workerIds);
-        
+    // 4️⃣ 🔴 ID’YE GÖRE GERÇEK ÇALIŞANLARI ÇEK
+    var workers = await workerService.GetWorkerServiceIdsAsync(workerIds);
 
     if (!workers.Any())
     {
@@ -230,19 +229,24 @@ Sorularınız veya destek talepleriniz için bizimle iletişime geçebilirsiniz.
         return;
     }
 
-    // 5️⃣ WhatsApp 24 karakter limiti için helper
+    // 5️⃣ WhatsApp 24 karakter helper
     string Short(string text, int max = 24)
-        => text.Length <= max ? text : text[..(max - 1)] + "…";
+        => string.IsNullOrWhiteSpace(text)
+            ? string.Empty
+            : text.Length <= max
+                ? text
+                : text[..(max - 1)] + "…";
 
-    // 6️⃣ Interactive list rows
+    // 6️⃣ Interactive list – ÇALIŞAN SEÇME
     var workerRows = workers
         .Select(w => (
             id: $"worker_{w.Id}",
-            title: Short(w.ServiceName, 24),
-            description: $"{w.DurationMinutes} dk • {w.Price:0.##} ₺"
+            title: Short(w.Name, 24),          // ✅ Çalışan adı
+            description: "Uygun randevuları gör"
         ))
         .ToList();
 
+    // 7️⃣ WhatsApp list gönder
     await whatsAppService.SendInteractiveListAsync(
         from,
         "💇 *Seçtiğiniz hizmet için uygun çalışanlar:*",
@@ -250,6 +254,7 @@ Sorularınız veya destek talepleriniz için bizimle iletişime geçebilirsiniz.
         workerRows
     );
 }
+
 
     private async Task StartBookingFlowAsync(string from)
     {
