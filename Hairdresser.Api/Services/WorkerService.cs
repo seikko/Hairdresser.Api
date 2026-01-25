@@ -144,11 +144,15 @@ public class WorkerService(IUnitOfWork unitOfWork, ILogger<WorkerService> logger
 
     }
 
-    public async Task<List<Worker>>GetWorkerServiceIdsAsync(List<int> workerIds)
+    public async Task<List<Worker>> GetWorkerServiceIdsAsync(List<int> workerIds)
     {
-        var service = await unitOfWork.Workers.FindAsync(y=> y.Id.Equals(workerIds));
-        return service.ToList();
+        // workerIds listesinde olan tüm WorkerId'leri çek
+        var workers = await unitOfWork.Workers
+            .FindAsync(y => workerIds.Contains(y.Id)); // FindAsync Expression alıyor
+
+        return workers.ToList(); // List<Worker> döndür
     }
+
 
 
     public async Task<WorkerServiceEntity> GetWorkerServiceByIdAsync(int serviceId)

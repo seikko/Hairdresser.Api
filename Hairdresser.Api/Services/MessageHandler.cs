@@ -225,10 +225,10 @@ Sorularınız veya destek talepleriniz için bizimle iletişime geçebilirsiniz.
         .Select(x => x.WorkerId)
         .Distinct()
         .ToList();
-
+    Console.WriteLine($"{workerIds.Count} worker ids ");
     // 5️⃣ Worker tablosundan gerçek çalışanları çek
     var workers = await workerService.GetWorkerServiceIdsAsync(workerIds);
-
+    Console.WriteLine($"{workers.Count} workers ");
     if (!workers.Any())
     {
         Console.WriteLine("ikinci if");
