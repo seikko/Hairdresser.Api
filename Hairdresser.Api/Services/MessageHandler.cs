@@ -208,6 +208,7 @@ Sorularınız veya destek talepleriniz için bizimle iletişime geçebilirsiniz.
         Console.WriteLine($"{mappingList.Count} mappings ");
         if (mappingList.Count == 0)
         {
+            Console.WriteLine($"{mappingList.Count} buraya girdi kod  ");
             await whatsAppService.SendTextMessageAsync(
                 from,
                 "❌ Bu hizmet için tanımlı çalışan bulunmamaktadır.");
