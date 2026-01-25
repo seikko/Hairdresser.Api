@@ -406,25 +406,37 @@ Sorularınız veya destek talepleriniz için bizimle iletişime geçebilirsiniz.
         .Select(t => ($"time_{t:HH:mm}", t.ToString("HH:mm"), (string?)null))
         .ToList();
 
-    // Bölüm 1: 09:00–17:00
+// Bölüm 1: 09:00–17:00
     var firstPage = timeRows.Where(t => TimeOnly.Parse(t.Item2) < new TimeOnly(17, 0)).ToList();
-    // Bölüm 2: 17:00–21:00
+// Bölüm 2: 17:00–21:00
     var secondPage = timeRows.Where(t => TimeOnly.Parse(t.Item2) >= new TimeOnly(17, 0)).ToList();
 
-    // Eğer ikinci sayfa varsa, 1. sayfaya "Devam" butonu ekle
-    if (secondPage.Any() && (state.TimePage == null || state.TimePage == 0))
+    const int maxRowsPerPage = 10;
+
+// Eğer ikinci sayfa varsa, 1. sayfayı maxRowsPerPage-1 olarak kırıyoruz
+    List<(string, string, string?)> firstPageLimited;
+    List<(string, string, string?)> secondPageLimited;
+
+    if (secondPage.Any())
     {
-        firstPage.Add(("time_page_2", "➡️ 17:00 – 21:00", "Akşam saatlerini göster"));
+        firstPageLimited = firstPage.Take(maxRowsPerPage - 1).ToList();
+        firstPageLimited.Add(("time_page_2", "➡️ 17:00 – 21:00", "Akşam saatlerini göster"));
+        secondPageLimited = secondPage.Take(maxRowsPerPage).ToList();
+    }
+    else
+    {
+        firstPageLimited = firstPage.Take(maxRowsPerPage).ToList();
+        secondPageLimited = new List<(string, string, string?)>();
     }
 
-    // Gönderim
+// Gönderim
     if (state.TimePage == null || state.TimePage == 0)
     {
         await whatsAppService.SendInteractiveListAsync(
             from,
             $"✅ Çalışan: *{state.SelectedWorkerName}*\n📅 Tarih: *{formattedDate}*\n\n🕐 Lütfen bir saat seçin (Bölüm 1):",
             "Saat Seç",
-            firstPage
+            firstPageLimited
         );
     }
     else if (state.TimePage == 1)
@@ -433,9 +445,10 @@ Sorularınız veya destek talepleriniz için bizimle iletişime geçebilirsiniz.
             from,
             $"✅ Çalışan: *{state.SelectedWorkerName}*\n📅 Tarih: *{formattedDate}*\n\n🕐 Lütfen bir saat seçin (Bölüm 2):",
             "Saat Seç",
-            secondPage
+            secondPageLimited
         );
     }
+
 }
 
 private async Task HandleTimeSelectionAsync(string from, string replyId, ConversationState state, int userId)
