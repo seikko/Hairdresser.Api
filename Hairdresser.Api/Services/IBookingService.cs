@@ -11,7 +11,7 @@ public interface IBookingService
 
     Task<List<TimeOnly>> GetAvailableTimeSlotsForWorkerAsync(int workerId, DateOnly date);
 
-    Task<Appointment?> CreateAppointmentAsync(int userId, int workerId, DateOnly date, TimeOnly time, string? serviceType);
+    Task<Appointment?> CreateAppointmentAsync(int userId, int workerId, DateOnly date, TimeOnly time, string? serviceType,int serviceId);
     Task<bool> CancelAppointmentAsync(int userId, int appointmentId);
     Task<List<Appointment>> GetUserAppointmentsAsync(int userId);
 }

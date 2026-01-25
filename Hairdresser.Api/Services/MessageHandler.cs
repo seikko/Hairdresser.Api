@@ -503,12 +503,14 @@ private async Task HandleTimeSelectionAsync(string from, string replyId, Convers
             return;
         }
 
+        Console.WriteLine($"{   state.SelectedServiceId.Value} serviceid");
         var appointment = await bookingService.CreateAppointmentAsync(
             userId,
             state.SelectedWorkerId.Value,
             state.SelectedDate.Value,
             state.SelectedTime.Value,
-            state.ServiceType
+            state.ServiceType,
+            state.SelectedServiceId.Value
         );
 
         if (appointment == null)

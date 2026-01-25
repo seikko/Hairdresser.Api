@@ -127,7 +127,7 @@ public class BookingService(IUnitOfWork unitOfWork, ILogger<BookingService> logg
 
 
     public async Task<Appointment?> CreateAppointmentAsync(int userId, int workerId, DateOnly date, TimeOnly time,
-        string? serviceType)
+        string? serviceType,int serviceId)
     {
         try
         {
@@ -161,7 +161,8 @@ public class BookingService(IUnitOfWork unitOfWork, ILogger<BookingService> logg
                 ServiceType = serviceType,
                 Status = "pending",
                 CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
+                UpdatedAt = DateTime.UtcNow,
+                ServiceId = serviceId
             };
 
             await unitOfWork.Appointments.AddAsync(appointment);
