@@ -338,9 +338,28 @@ Sorularınız veya destek talepleriniz için bizimle iletişime geçebilirsiniz.
         await conversationService.UpdateStateAsync(state);
 
         Console.WriteLine($"{state.SelectedServiceId} selected service id, Worker: {workerId}");
+        var availableDates = new List<(string id, string title, string? description)>();
+        var today = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(3));
 
-        // 4️⃣ Randevu tarihleri / saatlerini getir ve ilk interactive list'i göster
-        await HandleDateSelectionAsync(from, $"date_{DateTime.Now:yyyyMMdd}", state, workerId);
+        for (int i = 0; i < 7; i++)
+        {
+            var date = today.AddDays(i);
+            var dayName = date.ToString("dddd", new CultureInfo("tr-TR"));
+            var formattedDate = date.ToString("dd MMMM yyyy", new CultureInfo("tr-TR"));
+
+            availableDates.Add((
+                $"date_{date:yyyy-MM-dd}",
+                $"{dayName}",
+                formattedDate
+            ));
+        }
+
+        await whatsAppService.SendInteractiveListAsync(
+            from,
+            $"✅ Çalışan: *{worker.Name}*\n\n📅 Lütfen randevu için bir tarih seçin:",
+            "Tarih Seç",
+            availableDates
+        );
     }
 
 
@@ -369,6 +388,7 @@ Sorularınız veya destek talepleriniz için bizimle iletişime geçebilirsiniz.
     var availableSlots = await bookingService.GetAvailableTimeSlotsForWorkerAsync(state.SelectedWorkerId.Value, selectedDate);
     if (!availableSlots.Any())
     {
+        Console.WriteLine(selectedDate);
         await whatsAppService.SendTextMessageAsync(from,
             $"❌ {state.SelectedWorkerName} için bu tarihte müsait saat yok. Lütfen başka bir tarih seçin. /randevu");
         await conversationService.ClearStateAsync(from);
