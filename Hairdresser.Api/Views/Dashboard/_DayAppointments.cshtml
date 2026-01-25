@@ -1,13 +1,11 @@
+@using Hairdresser.Api.Models.ViewModels
 @model IEnumerable<Hairdresser.Api.Models.ViewModels.AppointmentViewModel>
 
 @{
     var selectedDate = ViewData["SelectedDate"] as string ?? "";
-    var workers = Model
-        .Select(a => new { a.WorkerId, a.WorkerName })
-        .Distinct()
-        .ToList();
-
-    var hours = Enumerable.Range(8, 13); // 08:00 - 20:00
+    var workers = ViewData["Workers"] as IEnumerable<WorkerListViewModel>
+                  ?? Enumerable.Empty<WorkerListViewModel>();
+    var hours = Enumerable.Range(8, 14); // 08:00 - 20:00
 }
 
 <div class="container my-4">
@@ -32,12 +30,12 @@
             @foreach (var worker in workers)
             {
                 <tr>
-                    <td class="fw-bold text-start ps-3">@worker.WorkerName</td>
+                    <td class="fw-bold text-start ps-3">@worker.Name</td>
 
                     @foreach (var hour in hours)
                     {
                         var app = Model.FirstOrDefault(a =>
-                            a.WorkerId == worker.WorkerId &&
+                            a.WorkerId == worker.Id &&
                             int.Parse(a.Time.Split(':')[0]) == hour
                         );
 
@@ -74,7 +72,7 @@
                             else
                             {
                                 <div class="empty-cell"
-                                     onclick="openCreate('@selectedDate','@worker.WorkerId','@hour:00')">
+                                     onclick="openCreate('@selectedDate','@worker.Id','@hour:00')">
                                     <span>Randevu Oluştur</span>
                                 </div>
                             }

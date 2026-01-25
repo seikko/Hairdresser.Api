@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Hairdresser.Api.Controllers;
 
 [Authorize]
-public class DashboardController(IDashboardService dashboardService) : Controller
+public class DashboardController(IDashboardService dashboardService,IWorkerService workerService) : Controller
 {
     public async Task<IActionResult> Index(string? date, int? workerId, int? month, int? year)
     {
@@ -61,7 +61,8 @@ public class DashboardController(IDashboardService dashboardService) : Controlle
 
         ViewData["SelectedDate"] = selectedDate.ToString("yyyy-MM-dd");
         ViewData["SelectedWorkerId"] = workerId;
-
+        var workers = await workerService.GetAllWorkersAsync();
+        ViewData["Workers"] = workers;
         var appointments = await dashboardService.GetDayAppointmentsAsync(selectedDate, workerId);
 
         return PartialView("_DayAppointments", appointments);
