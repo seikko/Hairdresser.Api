@@ -348,7 +348,7 @@ Sorularınız veya destek talepleriniz için bizimle iletişime geçebilirsiniz.
             var formattedDate = date.ToString("dd MMMM yyyy", new CultureInfo("tr-TR"));
 
             availableDates.Add((
-                $"date_{date:yyyy-MM-dd}",
+                $"date_{date:yyyy-MM-dd}", // <- burada tireleri de ekle
                 $"{dayName}",
                 formattedDate
             ));
@@ -367,13 +367,12 @@ Sorularınız veya destek talepleriniz için bizimle iletişime geçebilirsiniz.
     private async Task HandleDateSelectionAsync(string from, string replyId, ConversationState state, int userId)
 {
     var dateString = replyId.Replace("date_", "");
-    if (!DateOnly.TryParseExact(dateString, "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var selectedDate))
+    if (!DateOnly.TryParseExact(dateString, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var selectedDate))
     {
-        Console.WriteLine(dateString);
+        Console.WriteLine($"{dateString} tarhi ....");
         await whatsAppService.SendTextMessageAsync(from, "❌ Geçersiz tarih. Lütfen tekrar deneyin.");
         return;
     }
-
     if (!state.SelectedWorkerId.HasValue)
     {
         await whatsAppService.SendTextMessageAsync(from, "❌ Lütfen önce bir çalışan seçin. /randevu");
