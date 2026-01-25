@@ -1,6 +1,7 @@
 using System.Globalization;
 using Hairdresser.Api.Models;
 using Hairdresser.Api.Repositories;
+using Microsoft.EntityFrameworkCore;
 
 namespace Hairdresser.Api.Services;
 
@@ -340,10 +341,10 @@ Sorularınız veya destek talepleriniz için bizimle iletişime geçebilirsiniz.
 
             // 4️⃣ Worker + Service mappingleri çek (selectedServiceId ile filtrele)
             var mappings = await workerServiceMappingRepository.GetAllAsync();
-            var services = mappings
-                    .Where(s => s.WorkerId == workerId && s.ServiceId == state.SelectedServiceId && s.Service != null)
-                    .ToList();
-            services = services?.Where(s => s.Service != null).ToList();
+            var services = await workerServiceMappingRepository.FindAsync(
+                x => x.WorkerId == workerId && x.ServiceId == state.SelectedServiceId,
+                q => q.Include(x => x.Service)
+            );
 
             Console.WriteLine($"{services?.Count() ?? 0} services sayısı");
 

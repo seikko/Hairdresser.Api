@@ -15,4 +15,9 @@ public interface IRepository<T> where T : class
     void RemoveRange(IEnumerable<T> entities);
     Task<int> CountAsync(Expression<Func<T, bool>>? predicate = null);
     Task<bool> AnyAsync(Expression<Func<T, bool>> predicate);
+    // ✅ Include destekli FindAsync
+    Task<IEnumerable<T>> FindAsync(
+        Expression<Func<T, bool>> predicate,
+        Func<IQueryable<T>, IQueryable<T>>? include = null
+    );
 }
