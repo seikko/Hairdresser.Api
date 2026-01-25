@@ -10,7 +10,8 @@ public class MessageHandler(
     IConversationService conversationService,
     IAppointmentService appointmentService,
     ILogger<MessageHandler> logger,
-    IWorkerServiceMappingRepository  workerServiceMappingRepository)
+    IWorkerServiceEntityRepository  workerServiceRepository,
+    IWorkerServiceMappingRepository workerServiceMappingRepository)
     : IMessageHandler
 {
     public async Task HandleIncomingMessageAsync(string from, string messageText, string? senderName)
@@ -227,11 +228,10 @@ Sorularınız veya destek talepleriniz için bizimle iletişime geçebilirsiniz.
     }
     private async Task StartBookingFlowAsync(string from)
     {
-        var mappings = await workerServiceMappingRepository.GetAllAsync();
+        var mappings = await workerServiceRepository.GetAllAsync();
 
         var services = mappings
-            .Where(x => x.Service != null)
-            .Select(x => x.Service!)
+            .Select(x => x!)
             .GroupBy(s => s.Id)
             .Select(g => g.First())
             .ToList();
