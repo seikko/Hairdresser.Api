@@ -348,8 +348,9 @@ Sorularınız veya destek talepleriniz için bizimle iletişime geçebilirsiniz.
     private async Task HandleDateSelectionAsync(string from, string replyId, ConversationState state, int userId)
 {
     var dateString = replyId.Replace("date_", "");
-    if (!DateOnly.TryParse(dateString, out var selectedDate))
+    if (!DateOnly.TryParseExact(dateString, "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var selectedDate))
     {
+        Console.WriteLine(dateString);
         await whatsAppService.SendTextMessageAsync(from, "❌ Geçersiz tarih. Lütfen tekrar deneyin.");
         return;
     }
@@ -422,7 +423,12 @@ private async Task HandleTimeSelectionAsync(string from, string replyId, Convers
         state.TimePage = 1;
         await conversationService.UpdateStateAsync(state);
 
-        await HandleDateSelectionAsync(from, $"date_{state.SelectedDate}", state, userId);
+        await HandleDateSelectionAsync(
+            from,
+            $"date_{state.SelectedDate:yyyy-MM-dd}", // ISO formatı kullan
+            state,
+            userId
+        );
         return;
     }
 
