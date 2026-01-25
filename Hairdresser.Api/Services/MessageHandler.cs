@@ -1,5 +1,6 @@
 using System.Globalization;
 using Hairdresser.Api.Models;
+using Hairdresser.Api.Repositories;
 
 namespace Hairdresser.Api.Services;
 
@@ -8,7 +9,8 @@ public class MessageHandler(
     IBookingService bookingService,
     IConversationService conversationService,
     IAppointmentService appointmentService,
-    ILogger<MessageHandler> logger)
+    ILogger<MessageHandler> logger,
+    IWorkerServiceMappingRepository  workerServiceMappingRepository)
     : IMessageHandler
 {
     public async Task HandleIncomingMessageAsync(string from, string messageText, string? senderName)
@@ -204,7 +206,10 @@ Sorularınız veya destek talepleriniz için bizimle iletişime geçebilirsiniz.
         );
     }
 
-    private async Task HandleWorkerSelectionAsync(string from, string replyId, ConversationState state)
+    private async Task HandleWorkerSelectionAsync(
+        string from,
+        string replyId,
+        ConversationState state)
     {
         var workerIdString = replyId.Replace("worker_", "");
         if (!int.TryParse(workerIdString, out var workerId))
@@ -220,34 +225,38 @@ Sorularınız veya destek talepleriniz için bizimle iletişime geçebilirsiniz.
             return;
         }
 
+        // ✅ Çalışan seçildi
         state.SelectedWorkerId = workerId;
         state.SelectedWorkerName = worker.Name;
-        state.CurrentStep = ConversationStep.AwaitingDate;
+        state.CurrentStep = ConversationStep.AwaitingService;
         await conversationService.UpdateStateAsync(state);
 
-        var availableDates = new List<(string id, string title, string? description)>();
-        var today = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(3));
+        // 🔽 Çalışana ait hizmetleri getir
+        var services = await workerServiceMappingRepository.FindAsync(x=> x.ServiceId == workerId);
 
-        for (int i = 0; i < 7; i++)
+        if (!services.Any())
         {
-            var date = today.AddDays(i);
-            var dayName = date.ToString("dddd", new CultureInfo("tr-TR"));
-            var formattedDate = date.ToString("dd MMMM yyyy", new CultureInfo("tr-TR"));
-
-            availableDates.Add((
-                $"date_{date:yyyy-MM-dd}",
-                $"{dayName}",
-                formattedDate
-            ));
+            await whatsAppService.SendTextMessageAsync(
+                from,
+                "❌ Bu çalışan için tanımlı hizmet bulunmamaktadır."
+            );
+            await conversationService.ClearStateAsync(from);
+            return;
         }
 
+        var serviceList = services.Select(s => (
+            $"service_{s.Service.Id}",
+            s.Service.ServiceName,
+            s.Service.DurationMinutes != null ? $"{s.Service.DurationMinutes} dk" : null
+        )).ToList();
         await whatsAppService.SendInteractiveListAsync(
             from,
-            $"✅ Çalışan: *{worker.Name}*\n\n📅 Lütfen randevu için bir tarih seçin:",
-            "Tarih Seç",
-            availableDates
+            $"✅ Çalışan: *{worker.Name}*\n\n✨ Lütfen almak istediğiniz hizmeti seçin:",
+            "Hizmet Seç",
+            serviceList
         );
     }
+
 
    private async Task HandleDateSelectionAsync(string from, string replyId, ConversationState state, int userId)
 {

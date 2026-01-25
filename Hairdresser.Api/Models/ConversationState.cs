@@ -23,6 +23,7 @@ public enum ConversationStep
     Initial,
     AwaitingWorker,
     AwaitingDate,
+    AwaitingService,
     AwaitingTime,
     AwaitingServiceType,
     ConfirmingAppointment,

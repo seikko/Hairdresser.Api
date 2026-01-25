@@ -53,6 +53,7 @@ public class AppointmentRepository(ApplicationDbContext context)
     public async Task<IEnumerable<Appointment>> GetByDateRangeAsync(DateOnly startDate, DateOnly endDate)
     {
         return await _dbSet
+                .AsNoTracking() 
             .Include(a => a.User)
             .Include(a => a.Worker)
             .Where(a => a.AppointmentDate >= startDate && a.AppointmentDate <= endDate)
