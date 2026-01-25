@@ -334,22 +334,22 @@ Sorularınız veya destek talepleriniz için bizimle iletişime geçebilirsiniz.
             state.SelectedWorkerId = workerId;
             state.SelectedWorkerName = worker.Name;
             // selectedServiceId zaten önceki adımda state içinde tutuluyor
-            Console.WriteLine($"{state.SelectedServiceId} selected service id in state");
+            Console.WriteLine($"{state.SelectedServiceId} selected service id in state {workerId}");
             state.CurrentStep = ConversationStep.AwaitingService;
             await conversationService.UpdateStateAsync(state);
 
             // 4️⃣ Worker + Service mappingleri çek (selectedServiceId ile filtrele)
-            var services = await workerServiceMappingRepository.FindAsync(x =>
-                x.WorkerId == workerId && x.ServiceId == state.SelectedServiceId
-            );
-
-            // null-safe filtreleme
+            var mappings = await workerServiceMappingRepository.GetAllAsync();
+            var services = mappings
+                    .Where(s => s.WorkerId == workerId && s.ServiceId == state.SelectedServiceId && s.Service != null)
+                    .ToList();
             services = services?.Where(s => s.Service != null).ToList();
 
             Console.WriteLine($"{services?.Count() ?? 0} services sayısı");
 
             if (services == null || !services.Any())
             {
+                Console.WriteLine("ife girdi burası");
                 await whatsAppService.SendTextMessageAsync(
                     from,
                     "❌ Bu çalışan için seçilen hizmete ait kayıt bulunmamaktadır."
