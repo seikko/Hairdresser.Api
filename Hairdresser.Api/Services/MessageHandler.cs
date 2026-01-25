@@ -200,18 +200,20 @@ Sorularınız veya destek talepleriniz için bizimle iletişime geçebilirsiniz.
     state.CurrentStep = ConversationStep.AwaitingWorker;
     await conversationService.UpdateStateAsync(state);
     // 2️⃣ Hizmet → Worker mapping
-    var mappings = await workerServiceMappingRepository
-        .FindAsync(x => x.ServiceId == serviceId);
-    var mappingList = mappings.ToList();
-    Console.WriteLine($"{mappingList.Count} mappings ");
-    if (mappingList.Count() == 0)
-    {
-        await whatsAppService.SendTextMessageAsync(
-            from,
-            "❌ Bu hizmet için tanımlı çalışan bulunmamaktadır.");
-        await conversationService.ClearStateAsync(from);
-        return;
-    }
+        var mappings = await workerServiceMappingRepository.GetAllAsync();
+        var mappingList = mappings
+            .Where(y => y.ServiceId == state.SelectedServiceId)
+            .ToList();
+
+        Console.WriteLine($"{mappingList.Count} mappings ");
+        if (mappingList.Count == 0)
+        {
+            await whatsAppService.SendTextMessageAsync(
+                from,
+                "❌ Bu hizmet için tanımlı çalışan bulunmamaktadır.");
+            await conversationService.ClearStateAsync(from);
+            return;
+        }
 
     // 3️⃣ WorkerId’leri çıkar
     var workerIds = mappingList
