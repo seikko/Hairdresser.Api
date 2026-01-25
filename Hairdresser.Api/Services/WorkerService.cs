@@ -133,6 +133,18 @@ public class WorkerService(IUnitOfWork unitOfWork, ILogger<WorkerService> logger
         return services.ToList();
     }
 
+    public async Task<List<WorkerServiceEntity>> GetWorkerServiceEntitiesAsync(List<int> workerIds)
+    {
+        if (workerIds == null || !workerIds.Any())
+            return new List<WorkerServiceEntity>();
+
+        var allMappings = await unitOfWork.WorkerService.FindAsync(s => workerIds.Contains(s.Id));
+
+        return allMappings.ToList();
+
+    }
+
+
     public async Task<WorkerServiceEntity> GetWorkerServiceByIdAsync(int serviceId)
     {
         var service = await unitOfWork.WorkerService.GetByIdAsync(serviceId);

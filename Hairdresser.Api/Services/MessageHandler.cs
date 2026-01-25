@@ -10,6 +10,7 @@ public class MessageHandler(
     IConversationService conversationService,
     IAppointmentService appointmentService,
     ILogger<MessageHandler> logger,
+    IWorkerService workerService,
     IWorkerServiceEntityRepository  workerServiceRepository,
     IWorkerServiceMappingRepository workerServiceMappingRepository)
     : IMessageHandler
@@ -179,53 +180,77 @@ Sorularınız veya destek talepleriniz için bizimle iletişime geçebilirsiniz.
 
     
     private async Task HandleServiceSelectionAsync(
-        string from,
-        string replyId,
-        ConversationState state)
+    string from,
+    string replyId,
+    ConversationState state)
+{
+    var serviceIdStr = replyId.Replace("service_", "");
+    if (!int.TryParse(serviceIdStr, out var serviceId))
     {
-        var serviceIdStr = replyId.Replace("service_", "");
-        if (!int.TryParse(serviceIdStr, out var serviceId))
-        {
-            await whatsAppService.SendTextMessageAsync(from, "❌ Geçersiz hizmet seçimi.");
-            return;
-        }
-
-        state.SelectedServiceId = serviceId;
-        state.CurrentStep = ConversationStep.AwaitingWorker;
-        await conversationService.UpdateStateAsync(state);
-
-        var mappings = await workerServiceMappingRepository
-            .FindAsync(x => x.ServiceId == serviceId);
-
-        var workers = mappings
-            .Where(x => x.Worker != null)
-            .Select(x => x.Worker!)
-            .GroupBy(w => w.Id)
-            .Select(g => g.First())
-            .ToList();
-
-        if (!workers.Any())
-        {
-            await whatsAppService.SendTextMessageAsync(
-                from,
-                "❌ Bu hizmet için tanımlı çalışan bulunmamaktadır.");
-            await conversationService.ClearStateAsync(from);
-            return;
-        }
-
-        var workerRows = workers.Select(w => (
-            id: $"worker_{w.Id}",
-            title: w.Name,
-            description: w.Specialty ?? "Kuaför"
-        )).ToList();
-
-        await whatsAppService.SendInteractiveListAsync(
+        await whatsAppService.SendTextMessageAsync(
             from,
-            "💇 Lütfen çalışan seçin:",
-            "Çalışan Seç",
-            workerRows
-        );
+            "❌ Geçersiz hizmet seçimi.");
+        return;
     }
+
+    // 1️⃣ State güncelle
+    state.SelectedServiceId = serviceId;
+    state.CurrentStep = ConversationStep.AwaitingWorker;
+    await conversationService.UpdateStateAsync(state);
+
+    // 2️⃣ Hizmete ait mapping'leri al
+    var mappings = await workerServiceMappingRepository
+        .FindAsync(x => x.ServiceId == serviceId);
+    
+    if (!mappings.Any())
+    {
+        await whatsAppService.SendTextMessageAsync(
+            from,
+            "❌ Bu hizmet için tanımlı çalışan bulunmamaktadır.");
+        await conversationService.ClearStateAsync(from);
+        return;
+    }
+
+    // 3️⃣ WorkerId'leri çıkar
+    var workerIds = mappings
+        .Select(x => x.WorkerId)
+        .Distinct()
+        .ToList();
+
+    // 4️⃣ Worker tablosundan çalışanları çek
+    var workers = await workerService.GetWorkerServiceEntitiesAsync(workerIds);
+        
+
+    if (!workers.Any())
+    {
+        await whatsAppService.SendTextMessageAsync(
+            from,
+            "❌ Bu hizmet için tanımlı çalışan bulunmamaktadır.");
+        await conversationService.ClearStateAsync(from);
+        return;
+    }
+
+    // 5️⃣ WhatsApp 24 karakter limiti için helper
+    string Short(string text, int max = 24)
+        => text.Length <= max ? text : text[..(max - 1)] + "…";
+
+    // 6️⃣ Interactive list rows
+    var workerRows = workers
+        .Select(w => (
+            id: $"worker_{w.Id}",
+            title: Short(w.ServiceName, 24),
+            description: $"{w.DurationMinutes} dk • {w.Price:0.##} ₺"
+        ))
+        .ToList();
+
+    await whatsAppService.SendInteractiveListAsync(
+        from,
+        "💇 *Seçtiğiniz hizmet için uygun çalışanlar:*",
+        "Çalışan Seç",
+        workerRows
+    );
+}
+
     private async Task StartBookingFlowAsync(string from)
     {
         var mappings = await workerServiceRepository.GetAllAsync();
