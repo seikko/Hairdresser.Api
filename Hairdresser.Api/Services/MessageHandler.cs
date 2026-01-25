@@ -236,17 +236,15 @@ Sorularınız veya destek talepleriniz için bizimle iletişime geçebilirsiniz.
             .Select(g => g.First())
             .ToList();
 
-        if (!services.Any())
-        {
-            await whatsAppService.SendTextMessageAsync(from,
-                "❌ Şu anda müsait hizmet bulunmamaktadır.");
-            return;
-        }
+        string Short(string text, int max)
+            => text.Length <= max ? text : text.Substring(0, max - 1) + "…";
 
         var rows = services.Select(s => (
             id: $"service_{s.Id}",
-            title: s.ServiceName,
-            description: s.DurationMinutes != null ? $"{s.DurationMinutes} dk" : null
+            title: Short(s.ServiceName, 24),           // 🔥 MAX 24
+            description: s.ServiceName.Length > 24
+                ? $"{s.ServiceName} ({s.DurationMinutes} dk)"
+                : $"{s.DurationMinutes} dk"
         )).ToList();
 
         var state = new ConversationState
