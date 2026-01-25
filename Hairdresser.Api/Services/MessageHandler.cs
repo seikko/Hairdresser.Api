@@ -302,73 +302,81 @@ Sorularınız veya destek talepleriniz için bizimle iletişime geçebilirsiniz.
             rows
         );
     }
-   private async Task HandleWorkerSelectionAsync(
-    string from,
-    string replyId,
-    ConversationState state)
-{
-    // 1️⃣ WorkerId parse
-    var workerIdString = replyId.Replace("worker_", "");
-    if (!int.TryParse(workerIdString, out var workerId))
-    {
-        await whatsAppService.SendTextMessageAsync(
-            from, 
-            "❌ Geçersiz seçim. Lütfen tekrar deneyin."
-        );
-        return;
-    }
 
-    // 2️⃣ Worker bilgisi al
-    var worker = await bookingService.GetWorkerByIdAsync(workerId);
-    if (worker == null)
-    {
-        await whatsAppService.SendTextMessageAsync(
-            from, 
-            "❌ Çalışan bulunamadı. Lütfen tekrar deneyin."
-        );
-        return;
-    }
+        private async Task HandleWorkerSelectionAsync(
+            string from,
+            string replyId,
+            ConversationState state)
+        {
+            // 1️⃣ WorkerId parse
+            var workerIdString = replyId.Replace("worker_", "");
+            if (!int.TryParse(workerIdString, out var workerId))
+            {
+                await whatsAppService.SendTextMessageAsync(
+                    from,
+                    "❌ Geçersiz seçim. Lütfen tekrar deneyin."
+                );
+                return;
+            }
 
-    // 3️⃣ State güncelle
-    state.SelectedWorkerId = workerId;
-    state.SelectedWorkerName = worker.Name;
-    state.CurrentStep = ConversationStep.AwaitingService;
-    await conversationService.UpdateStateAsync(state);
+            // 2️⃣ Worker bilgisi al
+            var worker = await bookingService.GetWorkerByIdAsync(workerId);
+            if (worker == null)
+            {
+                await whatsAppService.SendTextMessageAsync(
+                    from,
+                    "❌ Çalışan bulunamadı. Lütfen tekrar deneyin."
+                );
+                return;
+            }
 
-    // 4️⃣ Worker için mappingleri çek
-    var services = await workerServiceMappingRepository.FindAsync(x => x.WorkerId == workerId);
-    services = services?.Where(s => s.Service != null).ToList(); // null-safe
+            // 3️⃣ State güncelle
+            state.SelectedWorkerId = workerId;
+            state.SelectedWorkerName = worker.Name;
+            // selectedServiceId zaten önceki adımda state içinde tutuluyor
+            Console.WriteLine($"{state.SelectedServiceId} selected service id in state");
+            state.CurrentStep = ConversationStep.AwaitingService;
+            await conversationService.UpdateStateAsync(state);
 
-    Console.WriteLine($"{services?.Count() ?? 0} services sayısı");
+            // 4️⃣ Worker + Service mappingleri çek (selectedServiceId ile filtrele)
+            var services = await workerServiceMappingRepository.FindAsync(x =>
+                x.WorkerId == workerId && x.ServiceId == state.SelectedServiceId
+            );
 
-    if (services == null || !services.Any())
-    {
-        await whatsAppService.SendTextMessageAsync(
-            from,
-            "❌ Bu çalışan için tanımlı hizmet bulunmamaktadır."
-        );
-        await conversationService.ClearStateAsync(from);
-        return;
-    }
+            // null-safe filtreleme
+            services = services?.Where(s => s.Service != null).ToList();
 
-    // 5️⃣ Interactive list için service satırlarını hazırla
-    var serviceList = services.Select(s => (
-        id: $"service_{s.Service.Id}",
-        title: s.Service.ServiceName ?? "İsimsiz Hizmet",
-        description: s.Service.DurationMinutes != null ? $"{s.Service.DurationMinutes} dk" : null
-    )).ToList();
+            Console.WriteLine($"{services?.Count() ?? 0} services sayısı");
 
-    // 6️⃣ WhatsApp interactive list gönder
-    await whatsAppService.SendInteractiveListAsync(
-        from,
-        $"✅ Çalışan: *{worker.Name}*\n\n✨ Lütfen almak istediğiniz hizmeti seçin:",
-        "Hizmet Seç",
-        serviceList
-    );
-}
+            if (services == null || !services.Any())
+            {
+                await whatsAppService.SendTextMessageAsync(
+                    from,
+                    "❌ Bu çalışan için seçilen hizmete ait kayıt bulunmamaktadır."
+                );
+                await conversationService.ClearStateAsync(from);
+                return;
+            }
+
+            // 5️⃣ Interactive list için service satırlarını hazırla
+            var serviceList = services.Select(s => (
+                id: $"service_{s.Service.Id}",
+                title: s.Service.ServiceName ?? "İsimsiz Hizmet",
+                description: s.Service.DurationMinutes != null ? $"{s.Service.DurationMinutes} dk" : null
+            )).ToList();
+
+            // 6️⃣ WhatsApp interactive list gönder
+            await whatsAppService.SendInteractiveListAsync(
+                from,
+                $"✅ Çalışan: *{worker.Name}*\n\n✨ Lütfen almak istediğiniz hizmeti seçin:",
+                "Hizmet Seç",
+                serviceList
+            );
+        }
+    
 
 
-   private async Task HandleDateSelectionAsync(string from, string replyId, ConversationState state, int userId)
+    private async Task HandleDateSelectionAsync(string from, string replyId, ConversationState state, int userId)
 {
     var dateString = replyId.Replace("date_", "");
     if (!DateOnly.TryParse(dateString, out var selectedDate))
