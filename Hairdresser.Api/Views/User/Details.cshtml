@@ -1,0 +1,135 @@
+@model Hairdresser.Api.Models.ViewModels.UserDetailsViewModel
+
+<style>
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #495057;
+        background-color: #f8f9fa;
+    }
+
+    .table thead {
+        background-color: #0d6efd; /* canlı mavi */
+        color: #fff;
+        text-align: center;
+    }
+
+    .table tbody td {
+        vertical-align: middle;
+        text-align: center;
+    }
+
+    .service-name {
+        font-weight: 500;
+        color: #212529;
+    }
+
+    .status-badge {
+        font-weight: 500;
+        padding: 0.35em 0.6em;
+        font-size: 0.85rem;
+        border-radius: 0.35rem;
+    }
+
+    .user-phone {
+        font-size: 0.95rem;
+        color: #212529;
+    }
+</style>
+
+<h2 class="mb-3">@Model.Name kullanıcısının Randevu Geçmişi</h2>
+<p class="user-phone">
+    <i class="bi bi-telephone-fill" style="color:red;"></i> 
+    <strong style="color:red;">Telefon:</strong> 
+    <span style="color:red;">@FormatPhone(Model.PhoneNumber)</span>
+</p>
+
+<table class="table table-hover table-bordered shadow-sm">
+    <thead>
+        <tr>
+            <th scope="col">Tarih</th>
+            <th scope="col">Saat</th>
+            <th scope="col">Hizmet</th>
+            <th scope="col"><i class="bi bi-clock"></i> Süre (dk)</th>
+            <th scope="col"><i class="bi bi-currency-dollar"></i> Fiyat (₺)</th>
+            <th scope="col"><i class="bi bi-journal-text"></i> Notlar</th>
+            <th scope="col"><i class="bi bi-info-circle"></i> Durum</th>
+            <th scope="col"><i class="bi bi-person"></i> Çalışan</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var appt in Model.Appointments)
+        {
+            <tr class="align-middle">
+                @* Tarih ve Saat *@
+                <td>@appt.Date</td>
+                <td>@appt.Time</td>
+
+                @* Hizmet *@
+                <td class="service-name">@appt.ServiceType</td>
+
+                @* Süre *@
+                <td>@appt.DurationMinutes</td>
+
+                @* Fiyat *@
+                <td>@appt.Price.ToString("0.00")</td>
+
+                @* Notlar *@
+                <td>@(!string.IsNullOrEmpty(appt.Notes) ? appt.Notes : "-")</td>
+
+                @* Durum badge + ikon *@
+                <td>
+                    <span class="status-badge @appt.StatusBadgeClass">
+                        @appt.StatusText
+                        @switch(appt.Status)
+                        {
+                            case "confirmed":
+                                <i class="bi bi-check-circle ms-1"></i>
+                                break;
+                            case "pending":
+                                <i class="bi bi-hourglass-split ms-1"></i>
+                                break;
+                            case "cancelled":
+                                <i class="bi bi-x-circle ms-1"></i>
+                                break;
+                            case "completed":
+                                <i class="bi bi-check2-square ms-1"></i>
+                                break;
+                        }
+                    </span>
+                </td>
+
+                @* Çalışan Adı *@
+                <td>@appt.WorkerName</td>
+
+            </tr>
+        }
+    </tbody>
+</table>
+
+<a asp-action="Index" class="btn btn-secondary mt-3">
+    <i class="bi bi-arrow-left"></i> Kullanıcılara Geri Dön
+</a>
+@functions{
+    public string FormatPhone(string phone)
+    {
+        if(string.IsNullOrEmpty(phone)) return "-";
+
+        // Sadece rakamları al
+        var digits = new string(phone.Where(char.IsDigit).ToArray());
+
+        if(digits.Length == 10) // 5xx xxx xx xx
+            return string.Format("{0} {1} {2} {3}",
+                digits.Substring(0,3),
+                digits.Substring(3,3),
+                digits.Substring(6,2),
+                digits.Substring(8,2));
+        else if(digits.Length == 11 && digits.StartsWith("0")) // 0xxx xxx xx xx
+            return string.Format("{0} {1} {2} {3}",
+                digits.Substring(0,4),
+                digits.Substring(4,3),
+                digits.Substring(7,2),
+                digits.Substring(9,2));
+        else
+            return phone; // Bilinmeyen format
+    }
+}

@@ -22,6 +22,8 @@ public class AppointmentViewModel
 {
     public int Id { get; set; }
     public string Time { get; set; } = string.Empty;
+    public string Date { get; set; } = string.Empty;
+    public string Note { get; set; } = string.Empty;
     public string CustomerName { get; set; } = string.Empty;
     public string PhoneNumber { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
@@ -41,6 +43,8 @@ public class AppointmentViewModel
         "completed" => "badge bg-info",
         _ => "badge bg-secondary"
     };
+
+    public WorkerServiceEntity ServiceEntity { get; set; }
 
     public string StatusText => Status switch
     {

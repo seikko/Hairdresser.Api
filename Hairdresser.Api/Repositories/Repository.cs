@@ -79,4 +79,17 @@ public class Repository<T>(ApplicationDbContext context) : IRepository<T>
 
         return await query.Where(predicate).ToListAsync();
     }
+
+    public async Task<IEnumerable<T>> GetAllAsync(Func<IQueryable<T>, IQueryable<T>>? include = null)
+    {
+        IQueryable<T> query = _dbSet;
+
+        if (include != null)
+        {
+            query = include(query);
+        }
+
+        return await query.ToListAsync();
+    }
 }
+ 

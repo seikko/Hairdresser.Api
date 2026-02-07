@@ -156,76 +156,78 @@
     <partial name="_ValidationScriptsPartial" />
 
     <script>
-    document.addEventListener("DOMContentLoaded", function () {
+            document.addEventListener("DOMContentLoaded", function () {
 
-        const workerSelect = document.getElementById("workerSelect");
-        const container = document.getElementById("servicesContainer");
+            const workerSelect = document.getElementById("workerSelect");
+            const container = document.getElementById("servicesContainer");
 
-        // Mevcut seçili hizmet varsa
-        const selectedServiceId = '@Model.SelectedServiceId';
+            // Mevcut seçili hizmet varsa string olarak al
+            const selectedServiceId = '@(Model.SelectedServiceId.ToString() ?? "")';
 
-        async function loadServices(workerId) {
+            async function loadServices(workerId) {
 
             container.innerHTML = '<div class="alert alert-info">Yükleniyor...</div>';
 
             if (!workerId) {
-                container.innerHTML =
-                    '<div class="alert alert-warning">Çalışan seçiniz</div>';
-                return;
-            }
-
-            try {
-                const response = await fetch(`/Appointments/GetServicesByWorker?workerId=${workerId}`);
-                const data = await response.json();
-
-                if (!data || data.length === 0) {
-                    container.innerHTML =
-                        '<div class="alert alert-warning">Bu çalışana ait hizmet yok</div>';
-                    return;
-                }
-
-                let html = '<div class="list-group">';
-
-                data.forEach(s => {
-                    const checked = s.serviceId == selectedServiceId ? 'checked' : '';
-
-                    html += `
-                        <label class="list-group-item d-flex justify-content-between align-items-center">
-                            <div>
-                                <input class="form-check-input me-2"
-                                       type="radio"
-                                       name="SelectedServiceId"
-                                       value="${s.serviceId}"
-                                       ${checked} />
-
-                                <strong>${s.serviceName}</strong>
-                                <small class="text-muted">(${s.durationMinutes} dk)</small>
-                            </div>
-
-                            <span class="badge bg-primary">${s.price} ₺</span>
-                        </label>
-                    `;
-                });
-
-                html += '</div>';
-                container.innerHTML = html;
-
-            } catch (err) {
-                container.innerHTML =
-                    '<div class="alert alert-danger">Hizmetler yüklenemedi</div>';
-                console.error(err);
-            }
+            container.innerHTML =
+            '<div class="alert alert-warning">Çalışan seçiniz</div>';
+            return;
         }
 
-        // Sayfa açıldığında seçili çalışan varsa hizmetleri yükle
-        if (workerSelect.value) {
+            try {
+            const response = await fetch(`/Appointments/GetServicesByWorker?workerId=${workerId}`);
+            const data = await response.json();
+
+            if (!data || data.length === 0) {
+            container.innerHTML =
+            '<div class="alert alert-warning">Bu çalışana ait hizmet yok</div>';
+            return;
+        }
+
+            let html = '<div class="list-group">';
+
+            data.forEach(s => {
+            // selectedServiceId ile güvenli string karşılaştırması
+            const checked = s.serviceId.toString() === selectedServiceId ? 'checked' : '';
+
+            html += `
+                    <label class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <input class="form-check-input me-2"
+                                   type="radio"
+                                   name="SelectedServiceId"
+                                   value="${s.serviceId}"
+                                   ${checked} />
+
+                            <strong>${s.serviceName}</strong>
+                            <small class="text-muted">(${s.durationMinutes} dk)</small>
+                        </div>
+
+                        <span class="badge bg-primary">${s.price} ₺</span>
+                    </label>
+                `;
+        });
+
+            html += '</div>';
+            container.innerHTML = html;
+
+        } catch (err) {
+            container.innerHTML =
+            '<div class="alert alert-danger">Hizmetler yüklenemedi</div>';
+            console.error(err);
+        }
+        }
+console.log(workerSelect.value);
+            // Sayfa açıldığında seçili çalışan varsa hizmetleri yükle
+            if (workerSelect.value) {
             loadServices(workerSelect.value);
         }
 
-        // Çalışan değiştiğinde hizmetleri tekrar yükle
-        workerSelect.addEventListener("change", function () {
+            // Çalışan değiştiğinde hizmetleri tekrar yükle
+            workerSelect.addEventListener("change", function () {
             loadServices(this.value);
         });
-    });
+        });
     </script>
+
 }

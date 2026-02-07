@@ -2,15 +2,35 @@
 @model IEnumerable<Hairdresser.Api.Models.ViewModels.AppointmentViewModel>
 
 @{
-    var selectedDate = ViewData["SelectedDate"] as string ?? "";
+    var selectedDateStr = ViewData["SelectedDate"] as string ?? "";
+    var selectedDate = DateTime.Parse(selectedDateStr);
+
     var workers = ViewData["Workers"] as IEnumerable<WorkerListViewModel>
-                  ?? Enumerable.Empty<WorkerListViewModel>();
-    var hours = Enumerable.Range(8, 15); // 08:00 - 20:00
+        ?? Enumerable.Empty<WorkerListViewModel>();
+
+    bool isToday = selectedDate.Date == DateTime.Today;
+    var nowTime = DateTime.Now.TimeOfDay;
+
+    var baseHours = Enumerable.Range(8, 13)
+        .Select(h => new TimeSpan(h, 0, 0))
+        .ToList();
+
+    var extraSlots = Model
+        .Select(a => TimeSpan.Parse(a.Time))
+        .Where(t => t.Minutes != 0)
+        .Distinct();
+
+    var timeSlots = baseHours
+        .Concat(extraSlots)
+        .Distinct()
+        .OrderBy(t => t)
+        .ToList();
 }
 
 <div class="container my-4">
+
     <h5 class="mb-4 fw-bold" style="color:#354259">
-        Randevular - @selectedDate
+        Randevular - @selectedDateStr
     </h5>
 
     <div class="table-responsive">
@@ -19,84 +39,79 @@
             <thead style="background:#354259;color:white;">
                 <tr>
                     <th style="width:180px;">Çalışan</th>
-                    @foreach (var hour in hours)
+                    @foreach (var slot in timeSlots)
                     {
-                        <th>@hour:00</th>
+                        if (!(isToday && slot <= nowTime))
+                        {
+                            <th>@slot.ToString(@"hh\:mm")</th>
+                        }
                     }
                 </tr>
             </thead>
 
             <tbody>
-            @foreach (var worker in workers)
-            {
-                <tr>
-                    <td class="fw-bold text-start ps-3">@worker.Name</td>
+                @foreach (var worker in workers)
+                {
+                    <tr>
+                        <td class="fw-bold text-start ps-3">@worker.Name</td>
 
-                    @foreach (var hour in hours)
-                    {
-                        var app = Model.FirstOrDefault(a =>
-                            a.WorkerId == worker.Id &&
-                            int.Parse(a.Time.Split(':')[0]) == hour
-                        );
+                        @foreach (var slot in timeSlots)
+                        {
+                            if (isToday && slot <= nowTime) { continue; }
 
-                        <td class="schedule-cell">
+                            var app = Model.FirstOrDefault(a =>
+                                a.WorkerId == worker.Id &&
+                                TimeSpan.Parse(a.Time) == slot
+                            );
 
-                            @if (app != null)
-                            {
-                                <div class="randevu-cell
-                                    @(app.Status=="confirmed" ? "appt-confirmed" :
-                                      app.Status=="pending" ? "appt-pending" :
-                                      "appt-cancelled")"
-                                     onclick="showAppointmentModal(
-                                        '@app.CustomerName',
-                                        '@app.PhoneNumber',
-                                        '@app.ServiceType',
-                                        '@app.Price',
-                                        '@app.Time',
-                                        '@app.Id'
-                                     )">
+                            <td class="schedule-cell">
 
-                                    <span class="fw-bold small text-truncate w-100 text-center">
-                                        @app.CustomerName
-                                    </span>
+                                @if (app != null)
+                                {
+                                    <div class="randevu-cell
+                                        @(app.Status=="confirmed" ? "appt-confirmed" :
+                                          app.Status=="pending" ? "appt-pending" :
+                                          "appt-cancelled")"
+                                        onclick='showAppointmentModal(
+                                            @Html.Raw(System.Text.Json.JsonSerializer.Serialize(app.CustomerName)),
+                                            @Html.Raw(System.Text.Json.JsonSerializer.Serialize(app.PhoneNumber)),
+                                            @Html.Raw(System.Text.Json.JsonSerializer.Serialize(app.ServiceType)),
+                                            @Html.Raw(System.Text.Json.JsonSerializer.Serialize(app.Price)),
+                                            @Html.Raw(System.Text.Json.JsonSerializer.Serialize(app.Time)),
+                                            @app.Id
+                                        )'>
+                                        <span class="fw-bold small">@app.CustomerName</span>
+                                        <span class="fst-italic small">@app.ServiceType</span>
+                                        <span class="small fw-bold">@app.Price ₺</span>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="empty-cell"
+                                        onclick="openCreate('@selectedDateStr','@worker.Id','@slot.ToString(@"hh\:mm")')">
+                                        Randevu Oluştur
+                                    </div>
+                                }
 
-                                    <span class="fst-italic small text-truncate w-100 text-center">
-                                        @app.ServiceType
-                                    </span>
-
-                                    <span class="small fw-bold">
-                                        @app.Price ₺
-                                    </span>
-                                </div>
-                            }
-                            else
-                            {
-                                <div class="empty-cell"
-                                     onclick="openCreate('@selectedDate','@worker.Id','@hour:00')">
-                                    <span>Randevu Oluştur</span>
-                                </div>
-                            }
-
-                        </td>
-                    }
-                </tr>
-            }
+                            </td>
+                        }
+                    </tr>
+                }
             </tbody>
 
         </table>
     </div>
 </div>
 
-<!-- MODAL -->
-<div class="modal fade" id="appointmentModal" tabindex="-1" aria-hidden="true">
+<!-- ================= MODAL ================= -->
+
+<div class="modal fade" id="appointmentModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content shadow-lg" style="border-radius:18px">
 
-            <div class="modal-header"
-                 style="background:#354259;color:white;border-radius:18px 18px 0 0">
+            <div class="modal-header" style="background:#354259;color:white">
                 <h5 class="modal-title fw-bold">Randevu Detayı</h5>
-                <button type="button" class="btn-close btn-close-white"
-                        data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
 
             <div class="modal-body">
@@ -108,22 +123,22 @@
 
                 <div class="mb-2">
                     <small class="text-muted">Telefon</small>
-                    <div id="custPhone" class="fw-semibold">-</div>
+                    <div id="custPhone">-</div>
                 </div>
 
                 <div class="mb-2">
                     <small class="text-muted">Hizmet</small>
-                    <div id="custService" class="fw-semibold">-</div>
+                    <div id="custService">-</div>
                 </div>
 
                 <div class="mb-2">
                     <small class="text-muted">Ücret</small>
-                    <div id="custPrice" class="fw-semibold">-</div>
+                    <div id="custPrice">-</div>
                 </div>
 
                 <div class="mb-2">
                     <small class="text-muted">Saat</small>
-                    <div id="custTime" class="fw-semibold">-</div>
+                    <div id="custTime">-</div>
                 </div>
 
             </div>
@@ -141,17 +156,13 @@
 <style>
     body { background:#f3f5fb; }
 
-    table {
-        border-radius:18px;
-        overflow:hidden;
-    }
+    table { border-radius:18px; overflow:hidden; }
 
     .schedule-cell {
-        min-width:95px;
-        height:85px;
-        padding:0 !important;
-        border:1px solid #e6e8f0 !important;
-        background:#fff;
+        width:95px; 
+        height:85px; 
+        padding:0; 
+        border:1px solid #e6e8f0;
     }
 
     .randevu-cell {
@@ -166,21 +177,14 @@
         cursor:pointer;
         color:white;
         font-size:13px;
-        box-shadow:0 6px 12px rgba(0,0,0,.08);
+        overflow:hidden; /* Uzun isim taşmasını önler */
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
-    .appt-confirmed {
-        background:linear-gradient(135deg,#5EC57E,#2FB36A);
-    }
-
-    .appt-pending {
-        background:linear-gradient(135deg,#FFD56E,#FF9F29);
-        color:#3d2b00;
-    }
-
-    .appt-cancelled {
-        background:linear-gradient(135deg,#ff6b6b,#c23636);
-    }
+    .appt-confirmed { background:#2fb36a; }
+    .appt-pending { background:#ff9f29; color:#3d2b00; }
+    .appt-cancelled { background:#c23636; }
 
     .empty-cell {
         width:100%;
@@ -191,35 +195,31 @@
         justify-content:center;
         align-items:center;
         cursor:pointer;
-        font-size:13px;
         font-weight:600;
-        color:#6b7391;
-    }
-
-    .empty-cell:hover {
-        background:#eef1ff;
-        color:#3a47ff;
+        font-size:13px;
+        text-align:center;
     }
 </style>
 
 <script>
-function showAppointmentModal(name, phone, service, price, time, id) {
+    function showAppointmentModal(name, phone, service, price, time, id) {
 
-    document.getElementById("custName").innerText = name;
-    document.getElementById("custPhone").innerText = phone;
-    document.getElementById("custService").innerText = service;
-    document.getElementById("custPrice").innerText = price + " ₺";
-    document.getElementById("custTime").innerText = time ;
-    document.getElementById("detailLink").href = `/Appointments/Edit/${id}`;
-    document.getElementById("cancelLink").href = `/Appointments/Delete/${id}`;
+        document.getElementById("custName").innerText = name;
+        document.getElementById("custPhone").innerText = phone;
+        document.getElementById("custService").innerText = service;
+        document.getElementById("custPrice").innerText = price + " ₺";
+        document.getElementById("custTime").innerText = time;
 
-    new bootstrap.Modal(
-        document.getElementById("appointmentModal")
-    ).show();
-}
+        document.getElementById("detailLink").href = `/Appointments/Edit/${id}`;
+        document.getElementById("cancelLink").href = `/Appointments/Delete/${id}`;
 
-function openCreate(date, workerId, time) {
-    window.location.href =
-        `/Appointments/Create?date=${date}&workerId=${workerId}&time=${time}`;
-}
+        new bootstrap.Modal(
+            document.getElementById("appointmentModal")
+        ).show();
+    }
+
+    function openCreate(date, workerId, time) {
+        window.location.href =
+            `/Appointments/Create?date=${date}&workerId=${workerId}&time=${time}`;
+    }
 </script>

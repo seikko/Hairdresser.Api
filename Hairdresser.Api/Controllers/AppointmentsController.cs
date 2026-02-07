@@ -197,7 +197,8 @@ public class AppointmentsController(IAppointmentService appointmentService, IWor
             DurationMinutes = appointment.DurationMinutes,
             Status = appointment.Status,
             ServiceType = appointment.ServiceType,
-            Notes = appointment.Notes
+            Notes = appointment.Notes,
+            SelectedServiceId = appointment.ServiceId.Value,
         };
 
         return View(vm);

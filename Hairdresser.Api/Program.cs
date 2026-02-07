@@ -51,6 +51,7 @@ builder.Services.AddScoped<IAppointmentService, AppointmentService>();
 
 builder.Services.AddHttpClient<IWhatsAppService, WhatsAppService>();
 builder.Services.AddScoped<IBookingService, BookingService>();
+builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddSingleton<IConversationService, ConversationService>();
 builder.Services.AddScoped<IMessageHandler, MessageHandler>();
 

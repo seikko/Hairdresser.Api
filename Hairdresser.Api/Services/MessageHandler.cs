@@ -25,6 +25,10 @@ public class MessageHandler(
             "/instagram", "instagram", "insta", "tasarım", "sosyal medya"
         };
         string[] addressCommands = { "/adres", "adres", "konum", "yoltarifi", "yol tarifi" };
+        string[] iptalCommands =
+        {
+            "/iptal", "iptal", "ıptal", "sil", "iptal et","randevu iptal","tras iptal","ipt"
+        };
         #endregion
         
 
@@ -76,7 +80,10 @@ public class MessageHandler(
             await SendInstagramButtonAsync(from);
             return;
         }
-        if (messageText.Trim().ToLower().StartsWith("/iptal"))
+        
+   
+        if (iptalCommands.Any(iptal => text.StartsWith(iptal)))
+
         {
             await StartCancellationFlowAsync(from, user.Id);
             return;

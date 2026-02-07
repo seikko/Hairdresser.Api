@@ -76,6 +76,19 @@ public class AppointmentService(IUnitOfWork unitOfWork, ILogger<AppointmentServi
         return await unitOfWork.Appointments.GetByIdAsync(id);
     }
 
+ 
+    public async Task<List<Appointment>?> GetAppointmentByUserIdAsync(int userId)
+    {
+        var appointments = await unitOfWork.Appointments.FindAsync(
+            x => x.UserId == userId,
+            include: query => query
+                .Include(a => a.Service)  // Servis bilgisi
+                .Include(a => a.Worker)   // Çalışan bilgisi
+        );
+        return appointments?.ToList();
+    }
+
+
     public async Task<Appointment?> GetAppointmentWithDetailsAsync(int id)
     {
         return await unitOfWork.Appointments.GetByIdWithDetailsAsync(id);
@@ -116,7 +129,7 @@ public class AppointmentService(IUnitOfWork unitOfWork, ILogger<AppointmentServi
                 AppointmentDate = date,
                 AppointmentTime = time,
                 DurationMinutes = durationMinutes,
-                Status = status,
+                Status = "confirmed",
                 ServiceType = string.IsNullOrWhiteSpace(serviceType) ? null : serviceType.Trim(),
                 Notes = string.IsNullOrWhiteSpace(notes) ? null : notes.Trim(),
                 CreatedAt = DateTime.UtcNow,
